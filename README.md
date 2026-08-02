@@ -103,3 +103,15 @@ invalidates previous generated file.
 Finally, rebuild the application, by running this command inside the build dir : 
 sh
 make -j5 
+
+If all succeed the application will boot up and look like this
+![Initial Display (Log)](images/initial_display.png)
+
+To add new section, click the plus icon in the sidebar. 
+
+![Main Display (Log)](images/main_display.png)
+Available topics will be listed at the select fields. 
+
+Fill inthe JSON data manually or by automatically generating with default value with Generate button
+Select the publish frequency, and click on Start Publish. If everything is correct the successfully published message
+will be printed inside the log window.
