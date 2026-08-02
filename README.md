@@ -1,117 +1,194 @@
-# WOODS - Writer a.k.a Publisher for OpenDDS topic.
+# WOODS
 
-WOODS is a tool to automatically generate OpenDDS publisher from given idl files and publish data into it.
+**W**riter a.k.a **P**ublisher for OpenDDS Topics
 
-WOODS support dynamic QoS setting by specifying each topic configuration
-inside `topics.json`
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-brightgreen.svg)
+![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
 
-## Requirements
+WOODS is a tool that automatically generates and manages OpenDDS publishers from IDL files. 
+Right now OpenDDS itself dont really have official tools for mock publishing. That is why I create WOODS.  
+It provides a user-friendly UI to dynamically configure QoS settings and publish data to OpenDDS topics in real-time.
 
-* OpenDDS (https://www.opendds.org) and its dependencies (ACE/TAO, and possibly openssl or xerces3)
-* SDL3
-* CMake
-* A compiler and tool chain capable of C++17
+## Features
 
-## Tested Platforms
+- 🚀 **Automatic Publisher Generation** – Generate OpenDDS publishers from IDL files automatically
+- ⚙️ **Dynamic QoS Configuration** – Configure Quality of Service settings per topic via `topics.json`
+- 🎨 **Interactive UI** – Intuitive graphical interface for managing multiple topics
+- 📊 **Real-time Publishing** – Publish messages with configurable frequency
 
-* Ubuntu 24.04 (g++ 11.5.0)
-* Windows (TBD)
+## 📋 Prerequisites
 
-## Building and Run
+- **OpenDDS** (https://www.opendds.org) with dependencies:
+  - ACE/TAO
+  - OpenSSL or Xerces3
+- **SDL3** – Graphics library for UI
+- **CMake** ≥ 3.x – Build system
+- **C++17 Compatible Compiler** – GCC 11.5.0+ or MSVC 2019+
+- **Conan** – Package manager
 
-```sh
-git clone https://github.com/agus-wesly/WODDS
+## 🖥️ Tested Platforms
+
+| OS | Compiler | Status |
+|---|---|---|
+| Ubuntu 24.04 | GCC 11.5.0 | ✅ Tested |
+| Windows | MSVC | 🚧 In Progress |
+
+## 🚀 Quick Start
+
+### Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/agus-wesly/WOODS
 cd WOODS
 
-# Debug build
-conan install . --output-folder=build-debug  --build=missing -s build_type=Debug            
-cmake --preset conan-debug -DCMAKE_BUILD_TYPE=Debug
-cmake --build build-debug -j5
-cd build-debug
-./woods
-
-# Release build
-conan install . --output-folder=build-release  --build=missing -s build_type=Release            
+conan install . --output-folder=build --build=missing -s build_type=Release
 cmake --preset conan-release -DCMAKE_BUILD_TYPE=Release
-cmake --build build-release -j5
-cd build-release
-./woods
+cmake --build build -j$(nproc)
+./build/woods
 
 ```
 
-## Configuration
+## ⚙️ Configuration
 
-An OpenDDS configuration file named `rtps.ini` is expected in parent directory of
-the WOODS executable for governing the local domain participant, otherwise the application will
-crash. 
+### Domain Participant Configuration
 
-### Important Notes
-For now the configuration for Domain Participant is static (at domain 0). In the future this
-will be configurable via config file. You can also change it by manually modifying the source
-code. Change the line 45 at `src/main.cpp`
+WOODS requires an OpenDDS configuration file named **`rtps.ini`** in the parent directory of the executable. This file governs the local domain participant settings.
 
-## Usage
+```ini
+# Example rtps.ini
+[common]
+DCPSDefaultDiscovery=DEFAULT_RTPS
+DCPSGlobalTransportConfig=$file
+DCPSLogLevel=notice
+DCPSLogFile=opendds_debug.log
 
-Upon startup, the application will read the config file named `topics.json`. To add new topic, add new topic object inside
-the array. The minimal working example of topic is defined like so : 
+[transport/the_rtps_transport]
+transport_type=rtps_udp
+```
+
+**Note:** Currently, the domain participant is hardcoded to domain 0. To change this, modify line 45 in `src/main.cpp`:
+
+```cpp
+// src/main.cpp (line 45)
+DomainParticipantFactory::get_instance()->create_participant(
+    0,  // <-- Change domain ID here
+    ...
+);
+```
+
+This will be made configurable via configuration file in a future release.
+
+### Topics Configuration
+
+WOODS reads a `topics.json` file at startup to configure topics. Each topic can be independently configured with custom QoS settings.
+
+#### Configuration File Format
 
 ```json
 [
-    {
-        "name": "Foo",
-        "idlFileName": "Foo",
-        "qos": {
-            "reliability": {
-                "kind": "best_effort"
-            },
-            "liveliness": {
-                "kind": "manual_by_topic"
-            },
-            "durability": {
-                "kind": "persistent"
-            }
-        }
+  {
+    "name": "Foo",
+    "idlFileName": "Foo",
+    "qos": {
+      "reliability": {
+        "kind": "best_effort"
+      },
+      "liveliness": {
+        "kind": "manual_by_topic"
+      },
+      "durability": {
+        "kind": "persistent"
+      }
     }
+  }
 ]
 ```
 
-name: contains the name of the topic that will be created
-idlFileName: contains the name of idl file defined inside idl directory (without .idl extension)
-qos: contains QoS configuration for the topic.
+#### Configuration Parameters
 
-For now the QoS supported is still limited. More QoS will be added in the future. Here are the list of supported QoS values.
+| Parameter | Type | Description |
+|---|---|---|
+| `name` | string | Topic name (must match IDL type name) |
+| `idlFileName` | string | IDL file name without `.idl` extension; file must exist in `idl/` directory |
+| `qos` | object | Quality of Service settings for the topic |
 
-reliability : 
-- reliable
-- best_effort
+#### Supported QoS Settings
 
-liveliness :
-- manual_by_topic
-- automatic
+| QoS Policy | Supported Values | Default |
+|---|---|---|
+| **reliability** | `reliable`, `best_effort` | `best_effort` |
+| **liveliness** | `manual_by_topic`, `automatic` | `automatic` |
+| **durability** | `volatile`, `persistent`, `transient` | `volatile` |
 
-durability : 
-- volatile
-- persistent
-- transient
+## 📖 Usage Guide
 
-Note that in order for topics to be created, the application need to first got rebuild. That said, when you want to add
-new topic, you need to add the corresponding .idl file inside idl/ directory. 
+### Adding a New Topic
 
-After that, you rebuilding the application. It is also recommended to delete the existing src/generated.hpp file to
-invalidates previous generated file.
+1. **Create an IDL File**  
+   Add your IDL type definition to the `idl/` directory:
+   
+   ```idl
+   // idl/MyMessage.idl
+   module messages {
+     struct MyMessage {
+       unsigned long id;
+       string data;
+     };
+   };
+   ```
 
-Finally, rebuild the application, by running this command inside the build dir : 
-sh
-make -j5 
+2. **Update `topics.json`**  
+   Add a new topic entry with desired QoS settings
 
-If all succeed the application will boot up and look like this
-![Initial Display (Log)](images/initial_display.png)
+3. **Rebuild the Application**  
+   ```bash
+   # Clean previous generated files (optional but recommended)
+   rm -f src/generated.hpp
+   
+   # Rebuild
+   cd build
+   cmake --build . -j$(nproc)
+   ```
 
-To add new section, click the plus icon in the sidebar. 
+4. **Run WOODS**  
+   ```bash
+   ./woods
+   ```
 
-![Main Display (Log)](images/main_display.png)
-Available topics will be listed at the select fields. 
+## 🔄 Workflow Summary
 
-Fill inthe JSON data manually or by automatically generating with default value with Generate button
-Select the publish frequency, and click on Start Publish. If everything is correct the successfully published message
-will be printed inside the log window.
+```
+1. Define IDL types in idl/
+        ↓
+2. Configure topics in topics.json
+        ↓
+3. Rebuild application (cmake --build ...)
+        ↓
+4. Run WOODS executable
+        ↓
+5. Use UI to publish messages
+```
+
+## 📝 Future Improvements
+
+- [ ] Support for additional QoS policies
+- [ ] Configurable domain participant via config file
+- [ ] Export .json data
+
+## 🤝 Contributing
+
+(TBD)
+
+## 📄 License
+
+This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
+
+## 📧 Support
+
+For issues, questions, or suggestions:
+- 📝 Open an [Issue](https://github.com/agus-wesly/WOODS/issues)
+- 💬 Start a [Discussion](https://github.com/agus-wesly/WOODS/discussions)
+
+---
