@@ -14,7 +14,7 @@ struct Topic {
     std::function<bool(const void*)> write;
     std::function<bool(const char*)> write_string;
     std::function<std::string()> generate_default_json_str;
-    std::function<DDS::DataReader_ptr(std::function<void(const char *)>)> begin_read;
+    // std::function<DDS::DataReader_ptr(std::function<void(const char *)>)> begin_read;
     DDS::Subscriber_ptr sub;
 };
 

@@ -156,33 +156,13 @@ int main(int argc, ACE_TCHAR* argv[]) {
         reader_qos.durability = configured_topic_qos.durability;
         reader_qos.liveliness = configured_topic_qos.liveliness;
         sub->get_default_datareader_qos(reader_qos);
-        topic_entry->begin_read = std::move(tsf->second.bindReader(sub, topic, reader_qos));
+        // topic_entry->begin_read = std::move(tsf->second.bindReader(sub, topic, reader_qos));
         topic_entry->sub = sub;
 
         std::cout << "Successfully added topic : " << topic_entry->name << std::endl;
         ui_state.topics.push_back(std::move(topic_entry));
     }
     std::cout << "Sucessfully initiate all topics. App is running..." << std::endl;
-
-    if (false) {
-        FooData::MessageTypeSupport_var mts = new FooData::MessageTypeSupportImpl();
-        if (DDS::RETCODE_OK != mts->register_type(participant, "")) {
-            std::cerr << "register_type failed." << std::endl;
-            return 1;
-        }
-        auto format = mts->make_format(OpenDDS::DCPS::JSON_DATA_REPRESENTATION);
-
-        std::string s = R"({})";
-        FooData::Message m{};
-        if (mts->decode_from_string(s.c_str(), m, format) != DDS::RETCODE_OK) {
-            std::cerr << "Failed to decode" << std::endl;
-        } else {
-            std::cout << "Success decode" << std::endl;
-        }
-
-        s = OpenDDS::DCPS::to_json(m);
-        std::cout << "Result : " << s << std::endl;
-    }
 
     UIMainLoop::run(ui_state);
 
