@@ -1,0 +1,17 @@
+[
+    {
+        "name": "Foo",
+        "idlFileName": "Foo",
+        "qos": {
+            "reliability": {
+                "kind": "best_effort"
+            },
+            "liveliness": {
+                "kind": "manual_by_topic"
+            },
+            "durability": {
+                "kind": "persistent"
+            }
+        }
+    }
+]

@@ -1,0 +1,6 @@
+build
+build-release
+.cache
+example.txt
+src/generated.hpp
+TODOS.txt

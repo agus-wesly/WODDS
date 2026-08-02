@@ -1,0 +1,14 @@
+module Foo {
+    enum Color {
+        RED,
+        GREEN,
+        BLUE
+    };
+
+    @topic
+        struct Message {
+            Color selected_color;
+            string<256> content;
+            double temp;
+        };
+};
