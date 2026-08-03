@@ -1,13 +1,15 @@
 # WOODS
 
-**W**riter a.k.a **P**ublisher for OpenDDS Topics
+**W**riter or (**P**ublisher) for OpenDDS Topics
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-brightgreen.svg)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
 
-WOODS is a tool that automatically generates and manages OpenDDS publishers from IDL files. 
-Right now OpenDDS itself dont really have official tools for mock publishing. That is why I create WOODS.  
+WOODS is a tool that automatically generates OpenDDS publishers from IDL files. 
+
+Right now OpenDDS itself dont really have official tools for mock publishing. That's why I create WOODS.  
+
 It provides a user-friendly UI to dynamically configure QoS settings and publish data to OpenDDS topics in real-time.
 
 ## Features
