@@ -45,9 +45,9 @@ It provides a user-friendly UI to dynamically configure QoS settings and publish
 git clone https://github.com/agus-wesly/WOODS
 cd WOODS
 
-conan install . --output-folder=build --build=missing -s build_type=Release
-cmake --preset conan-release -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
+conan install . --output-folder=build-release  --build=missing -s build_type=Release
+cmake --preset conan-release -DCMAKE_BUILD_TYPE=Release --fresh
+cmake --build build-release -j$(nproc)
 ./build/woods
 
 ```
