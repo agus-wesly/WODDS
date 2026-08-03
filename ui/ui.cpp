@@ -161,7 +161,7 @@ void UI::render_sidebar(UIState &ui_state)
     ImGui::End();
 }
 
-void UI::render_publisher(UIState &ui_state, ImGui::FileBrowser *file_dialog)
+void UI::render_publisher(UIState &ui_state)
 {
     static float frequency = 0.0f;
     ImGui::SetNextWindowSize(Vec2(600, 900), ImGuiCond_FirstUseEver);
@@ -457,7 +457,7 @@ struct Item
     const char* value;
 };
 
-void UI::render_subscriber(UIState &ui_state, ImGui::FileBrowser *file_dialog)
+void UI::render_subscriber(UIState &ui_state)
 {
     static float frequency = 0.0f;
 

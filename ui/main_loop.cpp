@@ -120,8 +120,6 @@ void run(UIState &ui_state)
 
     // OUR STATE
     // =================================================================
-    ImGui::FileBrowser fileDialog;
-    
     bool done = false;
     while (!done)
     {
@@ -166,10 +164,10 @@ void run(UIState &ui_state)
         // Custom Drawer
         UI::render_sidebar(ui_state);
 
-        UI::render_publisher(ui_state, &fileDialog);
+        UI::render_publisher(ui_state);
         UI::render_publisher_info(ui_state);
 
-        // UI::RenderSubscriber(ui_state, &fileDialog);
+        // UI::RenderSubscriber(ui_state);
 
         // Rendering
         ImGui::Render();
