@@ -196,13 +196,41 @@ void UI::render_publisher(UIState &ui_state, ImGui::FileBrowser *file_dialog)
             ImGui::SameLine(labelWidth*g_main_scale);
             ImGui::SetNextItemWidth(inputWidth);
 
-            const char *topicCStrs[ui_state.topics.size()];
-            for (int i = 0; i < ui_state.topics.size(); ++i)
+            const char* previewText = (section.selected_topic >= 0 &&
+                    section.selected_topic < (int)ui_state.topics.size())
+                ? ui_state.topics[section.selected_topic]->name.c_str()
+                : "##none";
+
+            if (ImGui::BeginCombo("##topic", previewText))
             {
-                auto &t = *ui_state.topics[i];
-                topicCStrs[i] = t.name.c_str();
+                if (ImGui::IsWindowAppearing())
+                {
+                    ImGui::SetKeyboardFocusHere();
+                    section.topic_filter[0] = '\0';
+                }
+
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                ImGui::InputText("##topic_filter", section.topic_filter, IM_ARRAYSIZE(section.topic_filter));
+
+                ImGuiTextFilter filter(section.topic_filter);
+                filter.Build();
+
+                for (size_t i = 0; i < ui_state.topics.size(); ++i)
+                {
+                    auto &t = *ui_state.topics[i];
+                    if (!filter.PassFilter(t.name.c_str()))
+                        continue;
+
+                    bool isSelected = (section.selected_topic == i);
+                    if (ImGui::Selectable(t.name.c_str(), isSelected))
+                        section.selected_topic = i;
+
+                    if (isSelected)
+                        ImGui::SetItemDefaultFocus();
+                }
+
+                ImGui::EndCombo();
             }
-            ImGui::Combo("##topic", &section.selected_topic, topicCStrs, static_cast<int>(ui_state.topics.size()));
 
             ImGui::Spacing();
             ImGui::Spacing();

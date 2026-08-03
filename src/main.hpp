@@ -71,6 +71,7 @@ struct Section {
     int selected_topic = 0;
     int selected_qos = 0;
     char filePath[256] = "";
+    char topic_filter[256] = "";
     std::string json_buffer = "{\n\t\n}";
     float freqs = 1.0f;
 
