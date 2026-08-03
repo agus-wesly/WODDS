@@ -91,11 +91,12 @@ void start_publish(
     }
 
     worker.running = true;
-    worker.job = std::thread([&worker, &topic, delay_time_ms, json_data, &logs]() mutable {
+    worker.job = std::thread([&worker, topic, delay_time_ms, json_data, &logs]() mutable {
         while (worker.running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(delay_time_ms));
-            assert(topic.write_string(json_data.c_str()));
-            logs_add(logs, topic.name, "publish success");
+            if (topic.write_string(json_data.c_str())) {
+                logs_add(logs, topic.name, "publish success");
+            }
         }
     });
 }
