@@ -7,6 +7,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
+#include "nfd.h"
 
 static uint16_t global_section_id = 0;
 
@@ -277,29 +278,28 @@ void UI::render_publisher(UIState &ui_state, ImGui::FileBrowser *file_dialog)
         // Upload Data
         //----------------------------------
         {
-
             ImGui::Text("Upload Data");
             ImGui::SameLine(labelWidth*g_main_scale);
 
-            if (ImGui::Button("Browse", Vec2(130, 28)))
-            {
-                file_dialog->SetTypeFilters({".json"});
-                file_dialog->Open();
-            }
+            if (ImGui::Button("Browse", Vec2(130, 28))) {
+                nfdchar_t *out_path = NULL;
+                const nfdchar_t *filter_list = "json"; 
+                nfdresult_t result = NFD_OpenDialog( filter_list, NULL, &out_path);
 
-            file_dialog->Display();
-            if (file_dialog->HasSelected())
-            {
-                std::snprintf(section.filePath, sizeof(section.filePath), "%s",
-                        file_dialog->GetSelected().string().c_str());
-                file_dialog->ClearSelected();
-
-                std::ifstream file(section.filePath);
-                if (file.is_open())
+                if (result == NFD_OKAY) 
                 {
-                    std::ostringstream ss;
-                    ss << file.rdbuf();
-                    section.json_buffer = ss.str();
+                    std::snprintf(section.filePath, sizeof(section.filePath), "%s", out_path);
+                    std::ifstream file(out_path);
+                    if (file.is_open())
+                    {
+                        std::ostringstream ss;
+                        ss << file.rdbuf();
+                        section.json_buffer = ss.str();
+                    }
+                    free(out_path);
+                }
+                else {
+                    printf("Error: %s\n", NFD_GetError() );
                 }
             }
 

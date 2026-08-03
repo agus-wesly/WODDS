@@ -46,8 +46,24 @@ target_include_directories(ui-objects PUBLIC
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
 )
+
+set(NFD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nfd)
+
+add_library(nfd STATIC IMPORTED)
+
+set_target_properties(nfd PROPERTIES
+    IMPORTED_LOCATION ${NFD_DIR}/libnfd.a
+    INTERFACE_INCLUDE_DIRECTORIES ${NFD_DIR}/include
+)
+
+find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    target_link_libraries(nfd INTERFACE ${GTK3_LIBRARIES})
+    target_include_directories(nfd INTERFACE ${GTK3_INCLUDE_DIRS})
+
 target_link_libraries(ui-objects PUBLIC 
     imgui
+    nfd
     OpenDDS::Dcps
     OpenDDS::Tcp
     OpenDDS::Udp
@@ -59,13 +75,14 @@ target_link_libraries(ui-objects PUBLIC
 add_executable(${PROJECT_NAME} 
     # cpp files
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-    $<TARGET_OBJECTS:ui-objects>
 )
 
+target_link_libraries(${PROJECT_NAME} PRIVATE ui-objects)
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
+    ${NFD_DIR}/include
 )
 
 # ------------------------------------------------------------------
@@ -107,6 +124,7 @@ add_custom_target(
 )
 
 add_dependencies(${PROJECT_NAME} generate_script)
+
 
 # ------------------------------------------------------------------
 # Conan Dependencies
