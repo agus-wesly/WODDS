@@ -178,7 +178,7 @@ void UI::render_publisher(UIState &ui_state, ImGui::FileBrowser *file_dialog)
         Topic &topic = *ui_state.topics[section.selected_topic];
 
         ImGui::SetWindowFontScale(1.5f);
-        ImGui::TextUnformatted("OpenDDS C++ Publisher");
+        ImGui::TextUnformatted("WOODS (Writer for OpenDDS)");
         ImGui::SetWindowFontScale(1.0f);
 
         ImGui::Spacing();

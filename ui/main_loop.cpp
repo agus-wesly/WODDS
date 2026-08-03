@@ -39,7 +39,7 @@ void run(UIState &ui_state)
     g_main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     g_main_scale += 0.25;
     SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    SDL_Window *window = SDL_CreateWindow("Backend OpenDDS Publisher", (int)(1280 * g_main_scale), (int)(800 * g_main_scale), window_flags);
+    SDL_Window *window = SDL_CreateWindow("WOODS", (int)(1280 * g_main_scale), (int)(800 * g_main_scale), window_flags);
     if (window == nullptr)
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());

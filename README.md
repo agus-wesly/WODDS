@@ -1,6 +1,6 @@
 # WOODS
 
-**W**riter or (**P**ublisher) for OpenDDS Topics
+Writer (publisher) for OpenDDS Topics
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-brightgreen.svg)
