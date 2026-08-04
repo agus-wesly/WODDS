@@ -120,6 +120,7 @@ int main(int argc, ACE_TCHAR* argv[]) {
             }
         }
 
+        // NOTE(wesly): This can be simplified by storing nm directly
         auto nm = topic_entry->idl_filename + std::string("_Message");
         auto tsf = typeSupportFactory.find(nm);
         if (tsf == typeSupportFactory.end()) {
