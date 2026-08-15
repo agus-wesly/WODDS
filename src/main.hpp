@@ -87,4 +87,5 @@ struct UIState {
     std::vector<std::unique_ptr<Topic>> topics;
     std::vector<std::unique_ptr<Section>> sections;
     int active_section = -1;
+    float main_scale = 1.0f;
 };

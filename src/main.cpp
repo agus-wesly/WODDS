@@ -29,11 +29,6 @@
 #define CR_HOST
 #include "third_party/cr.h"
 
-
-cr_plugin plugin{};
-void _load_dynamic_lib(UIState &ui_state)
-{
-}
 void init_ui(UIState &ui_state) {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
@@ -52,9 +47,9 @@ void init_ui(UIState &ui_state) {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    auto g_main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+    ui_state.main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    SDL_Window *window = SDL_CreateWindow("WOODS", (int)(1280 * g_main_scale), (int)(800 * g_main_scale), window_flags);
+    SDL_Window *window = SDL_CreateWindow("WOODS", (int)(1280 * ui_state.main_scale), (int)(800 * ui_state.main_scale), window_flags);
     if (window == nullptr)
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
@@ -86,7 +81,7 @@ void init_ui(UIState &ui_state) {
 
     // Setup scaling
     ImGuiStyle &style = ImGui::GetStyle();
-    style.ScaleAllSizes(g_main_scale);   // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.ScaleAllSizes(ui_state.main_scale);   // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
                                          // style.FontScaleDpi = main_scale;   // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
     io.ConfigDpiScaleFonts = true;     // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
     io.ConfigDpiScaleViewports = true; // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
@@ -121,7 +116,7 @@ void init_ui(UIState &ui_state) {
     // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use FreeType for higher quality font rendering.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
-    style.FontSizeBase = 16.0f * g_main_scale;
+    style.FontSizeBase = 16.0f * ui_state.main_scale;
     // io.Fonts->AddFontDefaultBitmap();
     // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
     // io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf");
@@ -131,6 +126,7 @@ void init_ui(UIState &ui_state) {
     // IM_ASSERT(font != nullptr);
 
     // Hot reloading
+    cr_plugin plugin{};
     plugin.userdata = &ui_state;
     if (!cr_plugin_open(plugin, "./libui.so")) {
         std::cerr << "Failed to opend libui.so" << std::endl;
@@ -159,10 +155,10 @@ void init_ui(UIState &ui_state) {
                 bool ctrl = (SDL_GetModState() & SDL_KMOD_CTRL) != 0;
 
                 // Handle Zoom In / Out
-                if (ctrl && (event.key.key == SDLK_EQUALS || event.key.key == SDLK_KP_PLUS)) g_main_scale += 0.1f;
-                if (ctrl && (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS)) g_main_scale -= 0.1f;
-                g_main_scale = SDL_clamp(g_main_scale, 0.5f, 3.0f);
-                style.FontSizeBase = 16.0f * g_main_scale;
+                if (ctrl && (event.key.key == SDLK_EQUALS || event.key.key == SDLK_KP_PLUS)) ui_state.main_scale += 0.1f;
+                if (ctrl && (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS)) ui_state.main_scale -= 0.1f;
+                ui_state.main_scale = SDL_clamp(ui_state.main_scale, 0.5f, 3.0f);
+                style.FontSizeBase = 16.0f * ui_state.main_scale;
 
             }
         }
@@ -204,7 +200,7 @@ void init_ui(UIState &ui_state) {
     }
 
     // Cleanup
-    // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppQuit() function]
+    cr_plugin_close(plugin);
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
@@ -368,7 +364,6 @@ int main(int argc, ACE_TCHAR* argv[]) {
 
     init_ui(ui_state);
 
-    cr_plugin_close(plugin);
     participant->delete_contained_entities();
     dpf->delete_participant(participant);
     TheServiceParticipant->shutdown();

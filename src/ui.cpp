@@ -9,37 +9,38 @@
 #include "nfd.h"
 #include "../third_party/cr.h"
 
+float g_main_scale = 1.0f;
+
 CR_EXPORT int cr_main(
     struct cr_plugin* ctx,
     enum cr_op operation)
 {
     UIState* state = static_cast<UIState *> (ctx->userdata);
     switch (operation) {
-        case CR_LOAD:
-            // plugin loaded/reloaded
+        case CR_STEP:
+            // draw UI
+            g_main_scale = state->main_scale;
             UI::draw(*state);
             return 0;
 
         case CR_UNLOAD:
             // plugin is about to be unloaded
+            // TODO: cleanup code...
             return 0;
 
         case CR_CLOSE:
             // plugin permanently closing
-            // TODO: cleanup code...
             return 0;
 
-        case CR_STEP:
-            // draw UI
-            UI::draw(*state);
-            return 0;
+        default:
+            break;
     }
 
     return 0;
 }
 
 static uint16_t global_section_id = 0;
-static float g_main_scale = 1.0f;
+// static float g_main_scale = 1.0f;
 
 ImVec2 Vec2(int x, int y) {
     return ImVec2(x*g_main_scale, y*g_main_scale);
