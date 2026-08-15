@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(OpenDDS REQUIRED)
 
 # ------------------------------------------------------------------
-# ImGui sources
+# ImGui sources (libimgui.so)
 # ------------------------------------------------------------------
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui)
 set(IMGUI_SOURCES
@@ -22,7 +22,7 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 add_library(imgui SHARED ${IMGUI_SOURCES})
-target_include_directories(imgui PUBLIC
+target_include_directories(imgui PRIVATE
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
 )
@@ -46,7 +46,7 @@ find_package(PkgConfig REQUIRED)
     target_include_directories(nfd INTERFACE ${GTK3_INCLUDE_DIRS})
 
 # ------------------------------------------------------------------
-# UI Code
+# UI Code (libui.so)
 # ------------------------------------------------------------------
 set(UI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/ui.cpp)
 add_library(ui SHARED ${UI_SOURCES})
@@ -56,6 +56,7 @@ target_include_directories(ui PRIVATE
     ${IMGUI_DIR}/backends
     ${NFD_DIR}/include
 )
+
 target_link_libraries(ui PRIVATE 
   imgui
   nfd
