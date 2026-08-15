@@ -10,6 +10,7 @@
 #include <optional>
 #include <thread>
 #include <SDL3/SDL.h>
+#include <dlfcn.h>
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL3/SDL_opengles2.h>
@@ -24,26 +25,31 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
-#include "ui.h"
 
+using UiDrawFn = void(*)(UIState*);
+UiDrawFn ui_draw = nullptr;
 
-std::unordered_map<std::string, DDS::ReliabilityQosPolicyKind> RELIABILITY_QOS_MAP = {
-    {"reliable", DDS::ReliabilityQosPolicyKind::RELIABLE_RELIABILITY_QOS},
-    {"best_effort", DDS::ReliabilityQosPolicyKind::BEST_EFFORT_RELIABILITY_QOS},
-};
-
-std::unordered_map<std::string, DDS::LivelinessQosPolicyKind> LIVELINESS_QOS_MAP = {
-    {"manual_by_topic", DDS::LivelinessQosPolicyKind::MANUAL_BY_TOPIC_LIVELINESS_QOS},
-    {"automatic", DDS::LivelinessQosPolicyKind::AUTOMATIC_LIVELINESS_QOS},
-};
-
-std::unordered_map<std::string, DDS::DurabilityQosPolicyKind> DURABILITY_QOS_MAP = {
-    {"volatile", DDS::DurabilityQosPolicyKind::VOLATILE_DURABILITY_QOS},
-    {"persistent", DDS::DurabilityQosPolicyKind::PERSISTENT_DURABILITY_QOS},
-    {"transient", DDS::DurabilityQosPolicyKind::TRANSIENT_DURABILITY_QOS},
-};
+void load_dynamic_lib() 
+{
+    void *handle = dlopen("./libui.so", RTLD_NOW);
+    if (!handle) 
+    {
+        std::cerr << "Failed to opend libui.so. Because : " << dlerror() << std::endl;
+        exit(69);
+    }
+    ui_draw = reinterpret_cast<UiDrawFn>(
+        dlsym(handle, "ui_draw")
+    );
+    const char *error = dlerror();
+    if (error) {
+        std::cerr << "Error : " << dlerror() << std::endl;
+        exit(69);
+    }
+}
 
 void init_ui(UIState &ui_state) {
+    load_dynamic_lib();
+
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
         printf("Error: SDL_Init(): %s\n", SDL_GetError());
@@ -186,14 +192,9 @@ void init_ui(UIState &ui_state) {
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport();
 
-        // Custom Drawer
-        UI::render_sidebar(ui_state);
-
-        UI::render_publisher(ui_state);
-        UI::render_publisher_info(ui_state);
-
-        // UI::RenderSubscriber(ui_state);
-
+        // TODO
+        assert(draw != nullptr);
+        ui_draw(&ui_state);
         // Rendering
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
@@ -225,6 +226,22 @@ void init_ui(UIState &ui_state) {
     SDL_DestroyWindow(window);
     SDL_Quit();
 }
+
+std::unordered_map<std::string, DDS::ReliabilityQosPolicyKind> RELIABILITY_QOS_MAP = {
+    {"reliable", DDS::ReliabilityQosPolicyKind::RELIABLE_RELIABILITY_QOS},
+    {"best_effort", DDS::ReliabilityQosPolicyKind::BEST_EFFORT_RELIABILITY_QOS},
+};
+
+std::unordered_map<std::string, DDS::LivelinessQosPolicyKind> LIVELINESS_QOS_MAP = {
+    {"manual_by_topic", DDS::LivelinessQosPolicyKind::MANUAL_BY_TOPIC_LIVELINESS_QOS},
+    {"automatic", DDS::LivelinessQosPolicyKind::AUTOMATIC_LIVELINESS_QOS},
+};
+
+std::unordered_map<std::string, DDS::DurabilityQosPolicyKind> DURABILITY_QOS_MAP = {
+    {"volatile", DDS::DurabilityQosPolicyKind::VOLATILE_DURABILITY_QOS},
+    {"persistent", DDS::DurabilityQosPolicyKind::PERSISTENT_DURABILITY_QOS},
+    {"transient", DDS::DurabilityQosPolicyKind::TRANSIENT_DURABILITY_QOS},
+};
 
 int main(int argc, ACE_TCHAR* argv[]) {
     UIState ui_state{};

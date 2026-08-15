@@ -38,11 +38,34 @@ add_library(nfd STATIC IMPORTED)
 set_target_properties(nfd PROPERTIES
     IMPORTED_LOCATION ${NFD_DIR}/libnfd.a
     INTERFACE_INCLUDE_DIRECTORIES ${NFD_DIR}/include
+    POSITION_INDEPENDENT_CODE ON
 )
 find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
     target_link_libraries(nfd INTERFACE ${GTK3_LIBRARIES})
     target_include_directories(nfd INTERFACE ${GTK3_INCLUDE_DIRS})
+
+# ------------------------------------------------------------------
+# UI Code
+# ------------------------------------------------------------------
+set(UI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/ui.cpp)
+add_library(ui SHARED ${UI_SOURCES})
+target_include_directories(ui PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
+    ${NFD_DIR}/include
+)
+target_link_libraries(ui PRIVATE 
+  imgui
+  nfd
+  OpenDDS::Dcps
+  OpenDDS::Tcp
+  OpenDDS::Udp
+  OpenDDS::Multicast
+  OpenDDS::Rtps_Udp
+  OpenDDS::InfoRepoDiscovery
+)
 
 # ------------------------------------------------------------------
 # Main Executable
@@ -51,7 +74,6 @@ add_executable(${PROJECT_NAME}
     # cpp files
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/globals.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
@@ -63,7 +85,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 
   imgui
-  nfd
 )
 
 # ------------------------------------------------------------------

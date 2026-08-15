@@ -1,4 +1,4 @@
-#include "globals.hpp"
+// #include "globals.hpp"
 #include "ui.h"
 #include "imgui.h"
 #include <climits>
@@ -9,7 +9,13 @@
 #include "rapidjson/prettywriter.h"
 #include "nfd.h"
 
+extern "C" void ui_draw(UIState *state) 
+{
+    UI::draw(*state);
+}
+
 static uint16_t global_section_id = 0;
+static float g_main_scale = 1.0f;
 
 ImVec2 Vec2(int x, int y) {
     return ImVec2(x*g_main_scale, y*g_main_scale);
@@ -102,7 +108,7 @@ void start_publish(
     });
 }
 
-void UI::render_sidebar(UIState &ui_state)
+void render_sidebar(UIState &ui_state)
 {
     if (ImGui::Begin("Sidebar"))
     {
@@ -161,7 +167,7 @@ void UI::render_sidebar(UIState &ui_state)
     ImGui::End();
 }
 
-void UI::render_publisher(UIState &ui_state)
+void render_publisher(UIState &ui_state)
 {
     static float frequency = 0.0f;
     ImGui::SetNextWindowSize(Vec2(600, 900), ImGuiCond_FirstUseEver);
@@ -413,7 +419,7 @@ void UI::render_publisher(UIState &ui_state)
     ImGui::End();
 }
 
-void UI::render_publisher_info(UIState &ui_state)
+void render_publisher_info(UIState &ui_state)
 {
     if (ImGui::Begin("Publisher Info"))
     {
@@ -450,6 +456,14 @@ void UI::render_publisher_info(UIState &ui_state)
     }
     ImGui::End();
 }
+
+void UI::draw(UIState &ui_state) 
+{
+    render_sidebar(ui_state);
+    render_publisher(ui_state);
+    render_publisher_info(ui_state);
+}
+
 struct Item
 {
     const char* name;
@@ -457,7 +471,7 @@ struct Item
     const char* value;
 };
 
-void UI::render_subscriber(UIState &ui_state)
+void render_subscriber(UIState &ui_state)
 {
     static float frequency = 0.0f;
 
