@@ -86,6 +86,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 file(GLOB_RECURSE IDL_FILES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/idl/*.idl
+)
 set(GENERATED_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/generated.hpp) 
 add_custom_command(
     OUTPUT ${GENERATED_HEADER}

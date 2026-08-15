@@ -9,15 +9,6 @@
 #include "rapidjson/error/en.h"
 #include <optional>
 #include <thread>
-
-#include "main.hpp"
-#include "generated.hpp"
-
-#include "globals.hpp"
-#include "imgui.h"
-#include "imgui_impl_sdl3.h"
-#include "imgui_impl_opengl3.h"
-#include <stdio.h>
 #include <SDL3/SDL.h>
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -26,8 +17,14 @@
 #include <SDL3/SDL_opengl.h>
 #endif
 
+#include "main.hpp"
+#include "generated.hpp"
+#include "globals.hpp"
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_opengl3.h"
+#include <stdio.h>
 #include "ui.h"
-// #include "../src/utils/config_util/config_util.h"
 
 
 std::unordered_map<std::string, DDS::ReliabilityQosPolicyKind> RELIABILITY_QOS_MAP = {
