@@ -11,6 +11,8 @@
 #include <thread>
 #include <SDL3/SDL.h>
 #include <dlfcn.h>
+#include <filesystem>
+#include <stdio.h>
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL3/SDL_opengles2.h>
@@ -23,32 +25,16 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_opengl3.h"
-#include <stdio.h>
 
-using UiDrawFn = void(*)(UIState*);
-UiDrawFn ui_draw = nullptr;
+#define CR_HOST
+#include "third_party/cr.h"
 
-void load_dynamic_lib() 
+
+cr_plugin plugin{};
+void _load_dynamic_lib(UIState &ui_state)
 {
-    void *handle = dlopen("./libui.so", RTLD_NOW);
-    if (!handle) 
-    {
-        std::cerr << "Failed to opend libui.so. Because : " << dlerror() << std::endl;
-        exit(69);
-    }
-    ui_draw = reinterpret_cast<UiDrawFn>(
-        dlsym(handle, "ui_draw")
-    );
-    const char *error = dlerror();
-    if (error) {
-        std::cerr << "Error : " << dlerror() << std::endl;
-        exit(69);
-    }
 }
-
 void init_ui(UIState &ui_state) {
-    load_dynamic_lib();
-
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
         printf("Error: SDL_Init(): %s\n", SDL_GetError());
@@ -95,10 +81,7 @@ void init_ui(UIState &ui_state) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
-                                                          // io.ConfigViewportsNoAutoMerge = true;
-                                                          // io.ConfigViewportsNoTaskBarIcon = true;
-
-                                                          // Setup Dear ImGui style
+                                                          
     ImGui::StyleColorsDark();
 
     // Setup scaling
@@ -147,8 +130,13 @@ void init_ui(UIState &ui_state) {
     // ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf");
     // IM_ASSERT(font != nullptr);
 
-    // OUR STATE
-    // =================================================================
+    // Hot reloading
+    plugin.userdata = &ui_state;
+    if (!cr_plugin_open(plugin, "./libui.so")) {
+        std::cerr << "Failed to opend libui.so" << std::endl;
+        exit(69);
+    }
+
     bool done = false;
     while (!done)
     {
@@ -169,14 +157,15 @@ void init_ui(UIState &ui_state) {
             if (event.type == SDL_EVENT_KEY_DOWN)
             {
                 bool ctrl = (SDL_GetModState() & SDL_KMOD_CTRL) != 0;
+
+                // Handle Zoom In / Out
                 if (ctrl && (event.key.key == SDLK_EQUALS || event.key.key == SDLK_KP_PLUS)) g_main_scale += 0.1f;
                 if (ctrl && (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS)) g_main_scale -= 0.1f;
                 g_main_scale = SDL_clamp(g_main_scale, 0.5f, 3.0f);
-
                 style.FontSizeBase = 16.0f * g_main_scale;
+
             }
         }
-
         // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppIterate() function]
         if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
         {
@@ -190,9 +179,9 @@ void init_ui(UIState &ui_state) {
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport();
 
-        // TODO
-        assert(draw != nullptr);
-        ui_draw(&ui_state);
+        // Call the UI::Draw method
+        cr_plugin_update(plugin);
+
         // Rendering
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
@@ -379,6 +368,7 @@ int main(int argc, ACE_TCHAR* argv[]) {
 
     init_ui(ui_state);
 
+    cr_plugin_close(plugin);
     participant->delete_contained_entities();
     dpf->delete_participant(participant);
     TheServiceParticipant->shutdown();

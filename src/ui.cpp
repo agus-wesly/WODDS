@@ -7,10 +7,35 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
 #include "nfd.h"
+#include "../third_party/cr.h"
 
-extern "C" void ui_draw(UIState *state) 
+CR_EXPORT int cr_main(
+    struct cr_plugin* ctx,
+    enum cr_op operation)
 {
-    UI::draw(*state);
+    UIState* state = static_cast<UIState *> (ctx->userdata);
+    switch (operation) {
+        case CR_LOAD:
+            // plugin loaded/reloaded
+            UI::draw(*state);
+            return 0;
+
+        case CR_UNLOAD:
+            // plugin is about to be unloaded
+            return 0;
+
+        case CR_CLOSE:
+            // plugin permanently closing
+            // TODO: cleanup code...
+            return 0;
+
+        case CR_STEP:
+            // draw UI
+            UI::draw(*state);
+            return 0;
+    }
+
+    return 0;
 }
 
 static uint16_t global_section_id = 0;
@@ -113,7 +138,7 @@ void render_sidebar(UIState &ui_state)
     {
         ImGui::BeginChild("Collections", Vec2(0, 0), true);
 
-        ImGui::Text("Collections");
+        ImGui::Text("Collection");
 
         float buttonSize = 28;
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - buttonSize*g_main_scale);
