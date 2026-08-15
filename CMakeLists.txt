@@ -32,52 +32,28 @@ pkg_check_modules(SDL3 REQUIRED sdl3)
 target_include_directories(imgui PUBLIC ${SDL3_INCLUDE_DIRS})
 target_link_libraries(imgui PUBLIC ${SDL3_LIBRARIES} GL dl)
 
-# ------------------------------------------------------------------
-# UI sources
-# ------------------------------------------------------------------
-set(UI_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/ui/globals.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/ui/main_loop.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui.cpp
-)
-add_library(ui-objects OBJECT ${UI_SOURCES})
-target_include_directories(ui-objects PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/ui
-    ${IMGUI_DIR}
-    ${IMGUI_DIR}/backends
-)
-
+# NFD (Native File Directory library)
 set(NFD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nfd)
-
 add_library(nfd STATIC IMPORTED)
-
 set_target_properties(nfd PROPERTIES
     IMPORTED_LOCATION ${NFD_DIR}/libnfd.a
     INTERFACE_INCLUDE_DIRECTORIES ${NFD_DIR}/include
 )
-
 find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
     target_link_libraries(nfd INTERFACE ${GTK3_LIBRARIES})
     target_include_directories(nfd INTERFACE ${GTK3_INCLUDE_DIRS})
 
-target_link_libraries(ui-objects PUBLIC 
-    imgui
-    nfd
-    OpenDDS::Dcps
-    OpenDDS::Tcp
-    OpenDDS::Udp
-    OpenDDS::Multicast
-    OpenDDS::Rtps_Udp
-    OpenDDS::InfoRepoDiscovery
-)
-
+# ------------------------------------------------------------------
+# Main Executable
+# ------------------------------------------------------------------
 add_executable(${PROJECT_NAME} 
     # cpp files
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/globals.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE ui-objects)
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${IMGUI_DIR}
@@ -85,14 +61,17 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${NFD_DIR}/include
 )
 
+target_link_libraries(${PROJECT_NAME} PRIVATE 
+  imgui
+  nfd
+)
+
 # ------------------------------------------------------------------
 # OpenDDS
 # ------------------------------------------------------------------
 file(GLOB IDL_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/idl/*.idl)
 opendds_target_sources(${PROJECT_NAME} PUBLIC ${IDL_FILES} OPENDDS_IDL_OPTIONS -Gxtypes-complete -Lc++11)
-
 target_link_libraries(${PROJECT_NAME} PRIVATE 
-  imgui
   OpenDDS::Dcps
   OpenDDS::Tcp
   OpenDDS::Udp
@@ -101,14 +80,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   OpenDDS::InfoRepoDiscovery
 )
 
+# ------------------------------------------------------------------
+# Auto Generating Script
+# ------------------------------------------------------------------
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-
 file(GLOB_RECURSE IDL_FILES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/idl/*.idl
-)
-
 set(GENERATED_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/generated.hpp) 
-
 add_custom_command(
     OUTPUT ${GENERATED_HEADER}
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/generate.py ${CMAKE_CURRENT_SOURCE_DIR}
@@ -117,14 +95,11 @@ add_custom_command(
     COMMENT "Generating header from IDL files"
     VERBATIM
 )
-
 add_custom_target(
     generate_script ALL
     DEPENDS ${GENERATED_HEADER}
 )
-
 add_dependencies(${PROJECT_NAME} generate_script)
-
 
 # ------------------------------------------------------------------
 # Conan Dependencies

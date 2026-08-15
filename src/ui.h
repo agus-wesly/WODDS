@@ -1,5 +1,5 @@
 #pragma once
-#include "../src/main.hpp"
+#include "main.hpp"
 
 namespace UI
 {
