@@ -21,7 +21,7 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
-add_library(imgui STATIC ${IMGUI_SOURCES})
+add_library(imgui SHARED ${IMGUI_SOURCES})
 target_include_directories(imgui PUBLIC
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
