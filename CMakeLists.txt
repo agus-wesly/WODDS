@@ -73,7 +73,6 @@ target_link_libraries(ui PRIVATE
 add_executable(${PROJECT_NAME} 
     # cpp files
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/globals.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE 

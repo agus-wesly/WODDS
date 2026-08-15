@@ -1,4 +1,3 @@
-// #include "globals.hpp"
 #include "ui.h"
 #include "imgui.h"
 #include <climits>

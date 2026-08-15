@@ -20,7 +20,6 @@
 
 #include "main.hpp"
 #include "generated.hpp"
-#include "globals.hpp"
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_opengl3.h"
@@ -67,8 +66,7 @@ void init_ui(UIState &ui_state) {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    g_main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-    g_main_scale += 0.25;
+    auto g_main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
     SDL_Window *window = SDL_CreateWindow("WOODS", (int)(1280 * g_main_scale), (int)(800 * g_main_scale), window_flags);
     if (window == nullptr)
