@@ -226,19 +226,23 @@ std::unordered_map<std::string, DDS::DurabilityQosPolicyKind> DURABILITY_QOS_MAP
     {"transient", DDS::DurabilityQosPolicyKind::TRANSIENT_DURABILITY_QOS},
 };
 
-int main(int argc, ACE_TCHAR* argv[]) {
-    UIState ui_state{};
+int main(int argc, char* argv[]) {
+    if (argc <= 1)
+    {
+        // Args is not provided, use default value
+        // In the future we might want to extend this 
+        // But for now lets keep it simple
+        char* arg1 = const_cast<ACE_TCHAR*>("woods");
+        char* arg2 = const_cast<ACE_TCHAR*>("-DCPSConfigFile");
+        char* arg3 = const_cast<ACE_TCHAR*>("../rtps.ini");
+        constexpr size_t ARG_COUNT = 3;
+        argc = ARG_COUNT;
+        // Let it leak.. Let it leak...
+        auto *args = new std::array<ACE_TCHAR*, ARG_COUNT> {arg1, arg2, arg3};
+        argv = args->data();
+    }
 
-    // TODO(wesly): Make this so that it can accepts value from CLI args
-    // If CLI args is not provided then we can use predefined default values
-    char* arg1 = const_cast<ACE_TCHAR*>("opendds-try");
-    char* arg2 = const_cast<ACE_TCHAR*>("-DCPSConfigFile");
-    char* arg3 = const_cast<ACE_TCHAR*>("../rtps.ini");
-
-    int args_count = 3;
-    std::array<ACE_TCHAR*, 3> args = {arg1, arg2, arg3};
-
-    DDS::DomainParticipantFactory_var dpf = TheParticipantFactoryWithArgs(args_count, args.data());
+    DDS::DomainParticipantFactory_var dpf = TheParticipantFactoryWithArgs(argc, argv);
     auto participant = dpf->create_participant(
             0,
             PARTICIPANT_QOS_DEFAULT,
@@ -269,6 +273,7 @@ int main(int argc, ACE_TCHAR* argv[]) {
     if (!ok) throw std::runtime_error(std::string("JSON parse error") + GetParseError_En(ok.Code()));
     if (!doc.IsArray()) throw std::runtime_error("Root JSON must be an array");
 
+    UIState ui_state{};
     ui_state.topics.reserve(doc.Size());
 
     for (auto& item: doc.GetArray()) {
