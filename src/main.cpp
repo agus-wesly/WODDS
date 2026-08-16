@@ -229,7 +229,8 @@ std::unordered_map<std::string, DDS::DurabilityQosPolicyKind> DURABILITY_QOS_MAP
 int main(int argc, ACE_TCHAR* argv[]) {
     UIState ui_state{};
 
-    // TODO(wesly): move into opendds_init function
+    // TODO(wesly): Make this so that it can accepts value from CLI args
+    // If CLI args is not provided then we can use predefined default values
     char* arg1 = const_cast<ACE_TCHAR*>("opendds-try");
     char* arg2 = const_cast<ACE_TCHAR*>("-DCPSConfigFile");
     char* arg3 = const_cast<ACE_TCHAR*>("../rtps.ini");

@@ -40,7 +40,14 @@ CR_EXPORT int cr_main(
 }
 
 static uint16_t global_section_id = 0;
-// static float g_main_scale = 1.0f;
+
+const auto BUTTON_GREEN         = ImVec4(0.35f, 0.65f, 0.45f, 1.0f);
+const auto BUTTON_GREEN_HOVERED = ImVec4(0.40f, 0.70f, 0.50f, 1.0f);
+const auto BUTTON_RED           = ImVec4(0.15f, 0.05f, 0.05f, 1.0f);
+const auto BUTTON_RED_HOVERED   = ImVec4(0.20f, 0.1f, 0.1f, 1.0f);
+const auto BUTTON_BLUE          = ImVec4(0.35f, 0.55f, 0.65f, 1.0f);
+const auto BUTTON_BLUE_HOVERED  = ImVec4(0.40f, 0.60f, 0.70f, 1.0f);
+
 
 ImVec2 Vec2(int x, int y) {
     return ImVec2(x*g_main_scale, y*g_main_scale);
@@ -105,19 +112,26 @@ void stop_worker(Worker &worker)
         worker.job.join();
 }
 
+void send_once(Topic &topic, Logs &logs, std::string_view json_data) 
+{
+    if (topic.write_string(json_data.data())) {
+        logs_add(logs, topic.name, "publish success");
+    }
+}
+
 void start_publish(
     Topic &topic,
     Worker &worker,
     Logs &logs,
     QosSettings qos,
-    std::string json_data,
+    std::string_view json_data,
     float freqs)
 {
     if (worker.running) return;
 
     const int delay_time_ms = 1000.0f / freqs;
 
-    if (!topic.write_string(json_data.c_str())) {
+    if (!topic.write_string(json_data.data())) {
         logs_add(logs, topic.name, "publish failed. Invalid JSON input data");
         return;
     }
@@ -126,7 +140,7 @@ void start_publish(
     worker.job = std::thread([&worker, topic, delay_time_ms, json_data, &logs]() mutable {
         while (worker.running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(delay_time_ms));
-            if (topic.write_string(json_data.c_str())) {
+            if (topic.write_string(json_data.data())) {
                 logs_add(logs, topic.name, "publish success");
             }
         }
@@ -385,27 +399,29 @@ void render_publisher(UIState &ui_state)
         }
 
         //----------------------------------
-        // Publish Buttons
+        // Action Buttons
         //----------------------------------
         {
             int fullWidth = ImGui::GetContentRegionAvail().x;
-            int setButtonWidth = 140;
-            ImGui::SameLine(fullWidth - setButtonWidth*g_main_scale);
+            constexpr const int setButtonWidth = 140;
+            ImGui::SameLine(fullWidth - 2*setButtonWidth*g_main_scale);
 
             auto &worker = section.worker;
+            // Start Publish Button
             if (!worker.running) {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 0.45f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.40f, 0.75f, 0.50f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Button, BUTTON_GREEN);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, BUTTON_GREEN_HOVERED);
                 if (ImGui::Button("Start Publish", Vec2(setButtonWidth, 40)))
                 {
                     start_publish(
                             topic, worker, 
-                            section.logs, section.qos, std::string(section.json_buffer),
+                            section.logs, section.qos, section.json_buffer,
                             section.freqs);
                 }
+            // Stop Publish Button
             } else {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.05f, 0.05f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.10f, 0.10f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Button, BUTTON_RED);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, BUTTON_RED_HOVERED);
                 if (ImGui::Button("Stop Publish", Vec2(setButtonWidth, 40)))
                 {
                     stop_worker(worker);
@@ -413,6 +429,18 @@ void render_publisher(UIState &ui_state)
                 }
             }
             ImGui::PopStyleColor(2);
+
+            // Send Once button
+            {
+                ImGui::SameLine();
+                ImGui::PushStyleColor(ImGuiCol_Button, BUTTON_BLUE);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, BUTTON_BLUE_HOVERED);
+                if (ImGui::Button("Send Once", Vec2(setButtonWidth, 40)))
+                {
+                    send_once(topic, section.logs, section.json_buffer);
+                }
+                ImGui::PopStyleColor(2);
+            }
 
             ImGui::Spacing();
             ImGui::Separator();
