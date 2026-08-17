@@ -81,6 +81,7 @@ void logs_add(Logs &l, std::string_view topic_name, std::string_view reason) {
 
     // [topic_name] reason
     // =====================================
+    // TODO(wesly): Use format instead of this
     e.message.clear();
     e.message.push_back('[');
     e.message.append(topic_name);

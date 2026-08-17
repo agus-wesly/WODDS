@@ -210,6 +210,7 @@ void init_ui(UIState &ui_state) {
     SDL_Quit();
 }
 
+// TODO: just use simple function and avoid map
 std::unordered_map<std::string, DDS::ReliabilityQosPolicyKind> RELIABILITY_QOS_MAP = {
     {"reliable", DDS::ReliabilityQosPolicyKind::RELIABLE_RELIABILITY_QOS},
     {"best_effort", DDS::ReliabilityQosPolicyKind::BEST_EFFORT_RELIABILITY_QOS},

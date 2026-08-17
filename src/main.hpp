@@ -8,6 +8,7 @@
 #define MAX_LOG_ITEM 100
 
 struct Topic {
+    // TODO(wesly): Don't use std::string, just use const char*
     std::string name;
     std::string idl_filename;
     DDS::TopicQos qos;
