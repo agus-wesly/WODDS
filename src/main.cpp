@@ -5,8 +5,8 @@
 #include <dds/DCPS/JsonValueWriter.h>
 #include <dds/DCPS/BuiltInTopicUtils.h>
 #include <dds/DCPS/XTypes/DynamicTypeSupport.h>
-#include "rapidjson/document.h"
-#include "rapidjson/error/en.h"
+#include "../third_party/rapidjson/document.h"
+#include "../third_party/rapidjson/error/en.h"
 #include <optional>
 #include <thread>
 #include <SDL3/SDL.h>

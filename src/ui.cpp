@@ -3,9 +3,9 @@
 #include <climits>
 #include <misc/cpp/imgui_stdlib.h>
 #include <chrono>
-#include "rapidjson/document.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/prettywriter.h"
+#include "third_party/rapidjson/document.h"
+#include "third_party/rapidjson/stringbuffer.h"
+#include "third_party/rapidjson/prettywriter.h"
 #include "nfd.h"
 #include "../third_party/cr.h"
 
