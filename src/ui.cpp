@@ -48,7 +48,6 @@ const auto BUTTON_RED_HOVERED   = ImVec4(0.20f, 0.1f, 0.1f, 1.0f);
 const auto BUTTON_BLUE          = ImVec4(0.35f, 0.55f, 0.65f, 1.0f);
 const auto BUTTON_BLUE_HOVERED  = ImVec4(0.40f, 0.60f, 0.70f, 1.0f);
 
-
 ImVec2 Vec2(int x, int y) {
     return ImVec2(x*g_main_scale, y*g_main_scale);
 }
@@ -157,7 +156,7 @@ void render_sidebar(UIState &ui_state)
         if (ImGui::Button("+", Vec2(buttonSize, buttonSize)))
         {
             auto newSec = std::make_unique<Section>();
-            newSec->name = "Section " + std::to_string(global_section_id++);
+            StringFormat(newSec->name, sizeof(newSec->name), "Section %02d", global_section_id++);
             ui_state.sections.push_back(std::move(newSec));
             ui_state.active_section = static_cast<int>(ui_state.sections.size()) - 1;
         }
@@ -172,10 +171,10 @@ void render_sidebar(UIState &ui_state)
             Section* current_section = ui_state.sections[i].get();
             bool isActive = (i == ui_state.active_section);
 
-            if (ImGui::Selectable(ui_state.sections[i]->name.c_str(), isActive)) ui_state.active_section = i;
+            if (ImGui::Selectable(ui_state.sections[i]->name, isActive)) ui_state.active_section = i;
 
             // Right-click context menu to delete
-            if (ImGui::BeginPopupContextItem(ui_state.sections[i]->name.c_str()))
+            if (ImGui::BeginPopupContextItem(ui_state.sections[i]->name))
             {
                 if (ImGui::MenuItem("Delete")) to_delete = i;
 

@@ -67,8 +67,7 @@ struct Logs {
 };
 
 struct Section {
-    // NOTE(wesly): Because this is read only, we can just store something like char[1024] instead
-    std::string name;
+    char name[512];
 
     // Publisher state
     int selected_topic = 0;
