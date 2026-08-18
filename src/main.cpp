@@ -210,7 +210,7 @@ void init_ui(UIState &ui_state) {
     SDL_Quit();
 }
 
-DDS::ReliabilityQosPolicyKind eval_reliabilitya_qos(std::string_view str_val)
+DDS::ReliabilityQosPolicyKind eval_reliability_qos(std::string_view str_val)
 {
     if (str_val == "reliable")    return DDS::ReliabilityQosPolicyKind::RELIABLE_RELIABILITY_QOS;
     if (str_val == "best_effort") return DDS::ReliabilityQosPolicyKind::BEST_EFFORT_RELIABILITY_QOS;
@@ -301,7 +301,7 @@ int main(int argc, char* argv[]) {
             auto qos_obj = item["qos"].GetObject();
 
             if (qos_obj.HasMember("reliability") && qos_obj["reliability"].IsObject()) {
-                auto v = eval_reliabilitya_qos(qos_obj["reliability"]["kind"].GetString());
+                auto v = eval_reliability_qos(qos_obj["reliability"]["kind"].GetString());
                 // TODO(wesly): When error, provide available correct values for each QoS.
                 assert (v != RELIABILITY_QOS_MAP.end() && "Invalid reliability kind value.");
                 topic_entry->qos.reliability.kind = v;
