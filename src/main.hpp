@@ -8,9 +8,8 @@
 #define MAX_LOG_ITEM 100
 
 struct Topic {
-    // TODO(wesly): Don't use std::string, just use const char*
-    std::string name;
-    std::string idl_filename;
+    const char* name;
+    const char* idl_filename;
     DDS::TopicQos qos;
     std::function<bool(const void*)> write;
     std::function<bool(const char*)> write_string;
@@ -57,8 +56,8 @@ struct Worker
 
 struct LogEntry
 {
-    std::string time;
-    std::string message;
+    char time[1024];
+    char message[1024];
 };
 
 struct Logs {

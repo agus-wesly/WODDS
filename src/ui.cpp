@@ -53,41 +53,35 @@ ImVec2 Vec2(int x, int y) {
     return ImVec2(x*g_main_scale, y*g_main_scale);
 }
 
-void log_entry_set_time(std::string &out)
+int StringFormat(char *buffer, size_t bufferSize, const char *format, ...) {
+	va_list arguments;
+
+	va_start(arguments, format);
+	size_t length = vsnprintf(buffer, bufferSize, format, arguments);
+	va_end(arguments);
+
+	if (length > bufferSize) {
+		// HACK This could truncate a UTF-8 codepoint.
+		length = bufferSize;
+	}
+
+	return length;
+}
+
+void log_entry_set_time(char* out)
 {
     auto now = std::chrono::system_clock::now();
     auto tt = std::chrono::system_clock::to_time_t(now);
-
     std::tm local_tm = *std::localtime(&tt);
 
-    out.clear();
-    out.reserve(8);
-
-    auto append_two_digits = [&out](int value) {
-        if (value < 10) out.push_back('0');
-        out += std::to_string(value);
-    };
-
-    append_two_digits(local_tm.tm_hour);
-    out.push_back(':');
-    append_two_digits(local_tm.tm_min);
-    out.push_back(':');
-    append_two_digits(local_tm.tm_sec);
+	StringFormat(out, sizeof(out), "%02d:%02d:%02d", local_tm.tm_hour, local_tm.tm_min, local_tm.tm_sec);
 }
 
-void logs_add(Logs &l, std::string_view topic_name, std::string_view reason) {
+void logs_add(Logs &l, const char* topic_name, const char* reason) {
     LogEntry &e = l.items[l.index];
     log_entry_set_time(e.time);
 
-    // [topic_name] reason
-    // =====================================
-    // TODO(wesly): Use format instead of this
-    e.message.clear();
-    e.message.push_back('[');
-    e.message.append(topic_name);
-    e.message.push_back(']');
-    e.message.push_back(' ');
-    e.message.append(reason);
+	StringFormat(e.message, sizeof(e.message), "[%s] %s", topic_name, reason);
     ++l.index;
 
     if (l.index == MAX_LOG_ITEM) l.index = l.index % MAX_LOG_ITEM;
@@ -245,7 +239,7 @@ void render_publisher(UIState &ui_state)
 
             const char* previewText = (section.selected_topic >= 0 &&
                     section.selected_topic < (int)ui_state.topics.size())
-                ? ui_state.topics[section.selected_topic]->name.c_str()
+                ? ui_state.topics[section.selected_topic]->name
                 : "##none";
 
             if (ImGui::BeginCombo("##topic", previewText))
@@ -265,11 +259,11 @@ void render_publisher(UIState &ui_state)
                 for (size_t i = 0; i < ui_state.topics.size(); ++i)
                 {
                     auto &t = *ui_state.topics[i];
-                    if (!filter.PassFilter(t.name.c_str()))
+                    if (!filter.PassFilter(t.name))
                         continue;
 
                     bool isSelected = (section.selected_topic == i);
-                    if (ImGui::Selectable(t.name.c_str(), isSelected))
+                    if (ImGui::Selectable(t.name, isSelected))
                         section.selected_topic = i;
 
                     if (isSelected)
@@ -496,11 +490,11 @@ void render_publisher_info(UIState &ui_state)
             if (current_log < 0) current_log = MAX_LOG_ITEM - 1;
             const LogEntry &log = section.logs.items[current_log];
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.65f, 0.67f, 0.72f, 1.0f));
-            ImGui::TextUnformatted(log.time.c_str());
+            ImGui::TextUnformatted(log.time);
             ImGui::PopStyleColor();
 
             ImGui::SameLine(110*g_main_scale);
-            ImGui::TextUnformatted(log.message.c_str());
+            ImGui::TextUnformatted(log.message);
 
             current_log--;
         }
@@ -571,7 +565,7 @@ void render_subscriber(UIState &ui_state)
             for (int i = 0; i < ui_state.topics.size(); ++i)
             {
                 auto &t = *ui_state.topics[i];
-                topicCStrs[i] = t.name.c_str();
+                topicCStrs[i] = t.name;
             }
             ImGui::Combo("##topic", &section.selected_topic, topicCStrs, static_cast<int>(ui_state.topics.size()));
 

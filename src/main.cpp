@@ -335,7 +335,7 @@ int main(int argc, char* argv[]) {
         auto type_name = tsf->second.createTypeSupport();
         if (DDS::RETCODE_OK != type_name->register_type(participant, "")) throw std::runtime_error("register_type failed." );
 
-        auto topic = participant->create_topic(topic_entry->name.c_str(), type_name->get_type_name(), topic_entry->qos, nullptr, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
+        auto topic = participant->create_topic(topic_entry->name, type_name->get_type_name(), topic_entry->qos, nullptr, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
         if (!topic) throw std::runtime_error("create_topic failed.");
 
         DDS::TopicQos configured_topic_qos;
