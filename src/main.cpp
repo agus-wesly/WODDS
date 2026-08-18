@@ -210,22 +210,30 @@ void init_ui(UIState &ui_state) {
     SDL_Quit();
 }
 
-// TODO: just use simple function and avoid map
-std::unordered_map<std::string, DDS::ReliabilityQosPolicyKind> RELIABILITY_QOS_MAP = {
-    {"reliable", DDS::ReliabilityQosPolicyKind::RELIABLE_RELIABILITY_QOS},
-    {"best_effort", DDS::ReliabilityQosPolicyKind::BEST_EFFORT_RELIABILITY_QOS},
-};
+DDS::ReliabilityQosPolicyKind eval_reliabilitya_qos(std::string_view str_val)
+{
+    if (str_val == "reliable")    return DDS::ReliabilityQosPolicyKind::RELIABLE_RELIABILITY_QOS;
+    if (str_val == "best_effort") return DDS::ReliabilityQosPolicyKind::BEST_EFFORT_RELIABILITY_QOS;
+    std::cerr << "Unhandled reliability qos" << std::endl;
+    exit(69);
+}
 
-std::unordered_map<std::string, DDS::LivelinessQosPolicyKind> LIVELINESS_QOS_MAP = {
-    {"manual_by_topic", DDS::LivelinessQosPolicyKind::MANUAL_BY_TOPIC_LIVELINESS_QOS},
-    {"automatic", DDS::LivelinessQosPolicyKind::AUTOMATIC_LIVELINESS_QOS},
-};
+DDS::LivelinessQosPolicyKind eval_liveliness_qos(std::string_view str_val) 
+{
+    if (str_val == "manual_by_topic") return DDS::LivelinessQosPolicyKind::MANUAL_BY_TOPIC_LIVELINESS_QOS;
+    if (str_val == "automatic")       return DDS::LivelinessQosPolicyKind::AUTOMATIC_LIVELINESS_QOS;
+    std::cerr << "Unhandled liveliness qos" << std::endl;
+    exit(69);
+}
 
-std::unordered_map<std::string, DDS::DurabilityQosPolicyKind> DURABILITY_QOS_MAP = {
-    {"volatile", DDS::DurabilityQosPolicyKind::VOLATILE_DURABILITY_QOS},
-    {"persistent", DDS::DurabilityQosPolicyKind::PERSISTENT_DURABILITY_QOS},
-    {"transient", DDS::DurabilityQosPolicyKind::TRANSIENT_DURABILITY_QOS},
-};
+DDS::DurabilityQosPolicyKind eval_durability_qos(std::string_view str_val) 
+{
+    if (str_val == "volatile")   return DDS::DurabilityQosPolicyKind::VOLATILE_DURABILITY_QOS;
+    if (str_val == "persistent") return DDS::DurabilityQosPolicyKind::PERSISTENT_DURABILITY_QOS;
+    if (str_val == "transient")  return DDS::DurabilityQosPolicyKind::TRANSIENT_DURABILITY_QOS;
+    std::cerr << "Unhandled durability qos" << std::endl;
+    exit(69);
+}
 
 int main(int argc, char* argv[]) {
     if (argc <= 1)
@@ -293,10 +301,10 @@ int main(int argc, char* argv[]) {
             auto qos_obj = item["qos"].GetObject();
 
             if (qos_obj.HasMember("reliability") && qos_obj["reliability"].IsObject()) {
-                auto v = RELIABILITY_QOS_MAP.find(qos_obj["reliability"]["kind"].GetString());
+                auto v = eval_reliabilitya_qos(qos_obj["reliability"]["kind"].GetString());
                 // TODO(wesly): When error, provide available correct values for each QoS.
                 assert (v != RELIABILITY_QOS_MAP.end() && "Invalid reliability kind value.");
-                topic_entry->qos.reliability.kind = v->second;
+                topic_entry->qos.reliability.kind = v;
 
                 if (qos_obj["reliability"].HasMember("max_blocking_time_sec") && qos_obj["reliability"]["max_blocking_time_sec"].IsNumber()) {
                     topic_entry->qos.reliability.max_blocking_time.sec = qos_obj["reliability"]["max_blocking_time_sec"].GetUint64();
@@ -306,9 +314,9 @@ int main(int argc, char* argv[]) {
                 }
             }
             if (qos_obj.HasMember("liveliness") && qos_obj["liveliness"].IsObject()) {
-                auto v = LIVELINESS_QOS_MAP.find(qos_obj["liveliness"]["kind"].GetString());
+                auto v = eval_liveliness_qos(qos_obj["liveliness"]["kind"].GetString());
                 assert(v != LIVELINESS_QOS_MAP.end() && "Invalid liveliness kind value.");
-                topic_entry->qos.liveliness.kind = v->second;
+                topic_entry->qos.liveliness.kind = v;
 
                 if (qos_obj["liveliness"].HasMember("lease_duration_sec") && qos_obj["liveliness"]["lease_duration_sec"].IsNumber()) {
                     topic_entry->qos.liveliness.lease_duration.sec = qos_obj["liveliness"]["lease_duration_sec"].GetUint64();
@@ -318,9 +326,9 @@ int main(int argc, char* argv[]) {
                 }
             }
             if (qos_obj.HasMember("durability") && qos_obj["durability"].IsObject()) {
-                auto v = DURABILITY_QOS_MAP.find(qos_obj["durability"]["kind"].GetString());
+                auto v = eval_durability_qos(qos_obj["durability"]["kind"].GetString());
                 assert(v != DURABILITY_QOS_MAP.end() && "Invalid durability kind value");
-                topic_entry->qos.durability.kind = v->second;
+                topic_entry->qos.durability.kind = v;
             }
         }
 
