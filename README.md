@@ -87,7 +87,7 @@ This will be made configurable via configuration file in a future release.
 
 WOODS reads a `topics.json` file at startup to configure topics. Each topic can be independently configured with custom QoS settings.
 
-#### Configuration File Format
+## Configuration File Format
 
 ```json
 [
@@ -96,10 +96,14 @@ WOODS reads a `topics.json` file at startup to configure topics. Each topic can 
     "idlFileName": "Foo",
     "qos": {
       "reliability": {
-        "kind": "best_effort"
+        "kind": "best_effort",
+        "max_blocking_time_sec": 2,
+        "max_blocking_time_nanosec": 1e8
       },
       "liveliness": {
-        "kind": "manual_by_topic"
+        "kind": "manual_by_topic",
+        "lease_duration_sec": 5,
+        "lease_duration_nanosec": 1e6
       },
       "durability": {
         "kind": "persistent"
@@ -114,7 +118,7 @@ WOODS reads a `topics.json` file at startup to configure topics. Each topic can 
 | Parameter | Type | Description |
 |---|---|---|
 | `name` | string | Topic name (must match IDL type name) |
-| `idlFileName` | string | IDL file name without `.idl` extension; file must exist in `idl/` directory |
+| `idlFileName` | string | IDL file name without `.idl` extension; file must exist in the `idl/` directory |
 | `qos` | object | Quality of Service settings for the topic |
 
 #### Supported QoS Settings
@@ -125,6 +129,28 @@ WOODS reads a `topics.json` file at startup to configure topics. Each topic can 
 | **liveliness** | `manual_by_topic`, `automatic` | `automatic` |
 | **durability** | `volatile`, `persistent`, `transient` | `volatile` |
 
+#### Reliability Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `kind` | string | Yes | Reliability kind. Supported values are `reliable` and `best_effort`. |
+| `max_blocking_time_sec` | number | No | Maximum blocking time in seconds. |
+| `max_blocking_time_nanosec` | number | No | Additional maximum blocking time in nanoseconds. |
+
+#### Liveliness Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `kind` | string | Yes | Liveliness kind. Supported values are `manual_by_topic` and `automatic`. |
+| `lease_duration_sec` | number | No | Liveliness lease duration in seconds. |
+| `lease_duration_nanosec` | number | No | Additional liveliness lease duration in nanoseconds. |
+
+#### Durability Parameters
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `kind` | string | Yes | Durability kind. Supported values are `volatile`, `persistent`, and `transient`. |
+
 ## 📖 Usage Guide
 
 ### Adding a New Topic
@@ -133,17 +159,40 @@ WOODS reads a `topics.json` file at startup to configure topics. Each topic can 
    Add your IDL type definition to the `idl/` directory:
    
    ```idl
-   // idl/MyMessage.idl
-   module messages {
+   // idl/Message.idl
+   module Message {
      struct MyMessage {
        unsigned long id;
        string data;
      };
    };
    ```
+   > [!WARNING]
+   > Note that idl's filename must match the idl module name. In above case `module Message` corressponds to `Message.idl` filename.
 
 2. **Update `topics.json`**  
-   Add a new topic entry with desired QoS settings
+   Add a new topic entry with desired QoS settings. For example :
+
+```json
+[
+  {
+    "name": "MessageTopic",
+    "idlFileName": "Message",
+    "qos": {
+      "reliability": {
+        "kind": "best_effort",
+        "max_blocking_time_nanosec": 1e8
+      },
+      "liveliness": {
+        "kind": "manual_by_topic"
+      },
+      "durability": {
+        "kind": "persistent"
+      }
+    }
+  }
+]
+```
 
 3. **Rebuild the Application**  
    ```bash
