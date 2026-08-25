@@ -31,16 +31,6 @@ struct QosSettings
     // TODO(wesly): add more QoS here.
 };
 
-struct Worker
-{
-    std::thread job;
-    std::atomic<bool> running = false;
-
-    Worker() = default;
-    Worker(const Worker &) = delete;
-    Worker &operator=(const Worker &) = delete;
-};
-
 struct LogEntry
 {
     char time[1024];
@@ -53,20 +43,10 @@ struct Logs {
     size_t n = 0;
 };
 
-struct Section {
-    char name[512];
-
-    // Publisher state
-    int selected_topic = 0;
-    int selected_qos = 0;
-    char filePath[256] = "";
-    char topic_filter[256] = "";
-    std::string json_buffer = "{\n\t\n}";
-    float freqs = 1.0f;
-
-    QosSettings qos;
-    Logs logs{};
-    Worker worker{};
+struct Worker
+{
+    std::thread job;
+    std::atomic<bool> running = false;
 };
 
 struct Topic {
@@ -89,9 +69,26 @@ struct Topics {
     std::vector<DDS::Subscriber_ptr> sub;
 };
 
+struct Section {
+    uint16_t id;
+    char name[512];
+
+    // Publisher state
+    int selected_topic = 0;
+    int selected_qos = 0;
+    char filePath[256] = "";
+    char topic_filter[256] = "";
+    std::string json_buffer = "{\n\t\n}";
+    float freqs = 1.0f;
+
+    QosSettings qos;
+    Logs logs{};
+};
+
 struct UIState {
     Topics topics;
-    std::vector<std::unique_ptr<Section>> sections;
-    int active_section = -1;
+    std::vector<Section> sections;
+    std::unordered_map<uint16_t, Worker> workers;
+    int16_t active_section = -1;
     float main_scale = 1.0f;
 };

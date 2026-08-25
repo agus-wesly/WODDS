@@ -159,9 +159,12 @@ void render_sidebar(UIState &ui_state)
         // Add new section
         if (ImGui::Button("+", Vec2(buttonSize, buttonSize)))
         {
-            auto newSec = std::make_unique<Section>();
-            StringFormat(newSec->name, sizeof(newSec->name), "Section %02d", global_section_id++);
-            ui_state.sections.push_back(std::move(newSec));
+            Section new_section;
+            const uint16_t new_id = global_section_id++;
+            new_section.id = new_id;
+            StringFormat(new_section.name, sizeof(new_section.name), "Section %02d", new_id);
+            ui_state.sections.push_back(new_section);
+            ui_state.workers.try_emplace(new_id);
             ui_state.active_section = static_cast<int>(ui_state.sections.size()) - 1;
         }
 
@@ -172,13 +175,12 @@ void render_sidebar(UIState &ui_state)
 
         for (int i = 0; i < static_cast<int>(ui_state.sections.size()); i++)
         {
-            Section* current_section = ui_state.sections[i].get();
             bool isActive = (i == ui_state.active_section);
 
-            if (ImGui::Selectable(ui_state.sections[i]->name, isActive)) ui_state.active_section = i;
+            if (ImGui::Selectable(ui_state.sections[i].name, isActive)) ui_state.active_section = i;
 
             // Right-click context menu to delete
-            if (ImGui::BeginPopupContextItem(ui_state.sections[i]->name))
+            if (ImGui::BeginPopupContextItem(ui_state.sections[i].name))
             {
                 if (ImGui::MenuItem("Delete")) to_delete = i;
 
@@ -189,13 +191,14 @@ void render_sidebar(UIState &ui_state)
         // Delete after iteration to avoid invalidating indices mid-loop
         if (to_delete != -1)
         {
-            auto item_to_delete = ui_state.sections.begin() + to_delete;
-            stop_worker(item_to_delete->get()->worker);
-            ui_state.sections.erase(item_to_delete);
+            auto item_to_delete_id = ui_state.sections[to_delete].id;
+            stop_worker(ui_state.workers[item_to_delete_id]);
+            ui_state.workers.erase(item_to_delete_id);
+            ui_state.sections.erase(ui_state.sections.begin() + to_delete);
 
             if (ui_state.sections.empty()) ui_state.active_section = -1;
             else
-                ui_state.active_section = std::clamp(ui_state.active_section, 0,
+                ui_state.active_section = std::clamp((int)ui_state.active_section, 0,
                         static_cast<int>(ui_state.sections.size()) - 1);
         }
 
@@ -219,7 +222,7 @@ void render_publisher(UIState &ui_state)
         }
 
         assert(ui_state.active_section != -1);
-        Section &section = *ui_state.sections[ui_state.active_section];
+        Section &section = ui_state.sections[ui_state.active_section];
         const auto topic_count = ui_state.topics.name.size();
         const char *selected_topic_name = ui_state.topics.name[section.selected_topic];
         const auto selected_topic_generate_default_json_str_fn = ui_state.topics.generate_default_json_str[section.selected_topic];
@@ -407,7 +410,7 @@ void render_publisher(UIState &ui_state)
             constexpr const int setButtonWidth = 140;
             ImGui::SameLine(fullWidth - 2*setButtonWidth*g_main_scale);
 
-            auto &worker = section.worker;
+            auto &worker = ui_state.workers[section.id];
             // Start Publish Button
             if (!worker.running) {
                 ImGui::PushStyleColor(ImGuiCol_Button, BUTTON_GREEN);
@@ -489,7 +492,7 @@ void render_publisher_info(UIState &ui_state)
             return;
         }
 
-        const Section &section = *ui_state.sections[ui_state.active_section];
+        const Section &section = ui_state.sections[ui_state.active_section];
 
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f);
         ImGui::BeginChild("##LogViewer", Vec2(0, 0), true,
@@ -552,7 +555,7 @@ void render_subscriber(UIState &ui_state)
             return;
         }
 
-        Section &section = *ui_state.sections[ui_state.active_section];
+        Section &section = ui_state.sections[ui_state.active_section];
 
         ImGui::SetWindowFontScale(1.5f);
         ImGui::TextUnformatted("OpenDDS C++ Subscriber");
@@ -633,7 +636,7 @@ void render_subscriber(UIState &ui_state)
             const int setButtonWidth = 170;
             ImGui::SameLine((fullWidth - setButtonWidth)*g_main_scale);
 
-            auto &worker = section.worker;
+            auto &worker = ui_state.workers[section.id];
             if (!worker.running) {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 0.45f, 1.0f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.40f, 0.75f, 0.50f, 1.0f));
