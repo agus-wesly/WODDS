@@ -7,17 +7,6 @@
 
 #define MAX_LOG_ITEM 100
 
-struct Topic {
-    const char* name;
-    const char* idl_filename;
-    DDS::TopicQos qos;
-    std::function<bool(const void*)> write;
-    std::function<bool(const char*)> write_string;
-    std::function<std::string()> generate_default_json_str;
-    // std::function<DDS::DataReader_ptr(std::function<void(const char *)>)> begin_read;
-    DDS::Subscriber_ptr sub;
-};
-
 enum Reliability {
     BEST_EFFORT = 0,
     RELIABLE
@@ -80,8 +69,28 @@ struct Section {
     Worker worker{};
 };
 
+struct Topic {
+    const char* name;
+    const char* idl_filename;
+    DDS::TopicQos qos;
+    std::function<bool(const void*)> write;
+    std::function<bool(const char*)> write_string;
+    std::function<std::string()> generate_default_json_str;
+    DDS::Subscriber_ptr sub;
+};
+
+struct Topics {
+    std::vector<const char*> name;
+    std::vector<const char*> idl_filename;
+    std::vector<DDS::TopicQos> qos;
+    std::vector<std::function<bool(const void*)>> write;
+    std::vector<std::function<bool(const char*)>> write_string;
+    std::vector<std::function<std::string()>> generate_default_json_str;
+    std::vector<DDS::Subscriber_ptr> sub;
+};
+
 struct UIState {
-    std::vector<std::unique_ptr<Topic>> topics;
+    Topics topics;
     std::vector<std::unique_ptr<Section>> sections;
     int active_section = -1;
     float main_scale = 1.0f;

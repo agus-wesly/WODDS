@@ -235,6 +235,16 @@ DDS::DurabilityQosPolicyKind eval_durability_qos(std::string_view str_val)
     exit(69);
 }
 
+void add_topic(UIState &ui_state, const Topic &t) {
+    ui_state.topics.name.push_back(t.name);
+    ui_state.topics.idl_filename.push_back(t.idl_filename);
+    ui_state.topics.qos.push_back(t.qos);
+    ui_state.topics.write.push_back(t.write);
+    ui_state.topics.write_string.push_back(t.write_string);
+    ui_state.topics.generate_default_json_str.push_back(t.generate_default_json_str);
+    ui_state.topics.sub.push_back(t.sub);
+}
+
 int main(int argc, char* argv[]) {
     if (argc <= 1)
     {
@@ -283,19 +293,19 @@ int main(int argc, char* argv[]) {
     if (!doc.IsArray()) throw std::runtime_error("Root JSON must be an array");
 
     UIState ui_state{};
-    ui_state.topics.reserve(doc.Size());
+    // ui_state.topics.reserve(doc.Size());
 
     for (auto& item: doc.GetArray()) {
         if (!item.IsObject()) throw std::runtime_error("Must be an object");
 
-        auto topic_entry = std::make_unique<Topic>();
-        participant->get_default_topic_qos(topic_entry->qos);
+        Topic topic_entry{};
+        participant->get_default_topic_qos(topic_entry.qos);
 
         if (item.HasMember("name") && item["name"].IsString()) {
-            topic_entry->name = item["name"].GetString();
+            topic_entry.name = item["name"].GetString();
         }
         if (item.HasMember("idlFileName") && item["idlFileName"].IsString()) {
-            topic_entry->idl_filename = item["idlFileName"].GetString();
+            topic_entry.idl_filename = item["idlFileName"].GetString();
         }
         if (item.HasMember("qos") && item["qos"].IsObject()) {
             auto qos_obj = item["qos"].GetObject();
@@ -304,36 +314,36 @@ int main(int argc, char* argv[]) {
                 auto v = eval_reliability_qos(qos_obj["reliability"]["kind"].GetString());
                 // TODO(wesly): When error, provide available correct values for each QoS.
                 assert (v != RELIABILITY_QOS_MAP.end() && "Invalid reliability kind value.");
-                topic_entry->qos.reliability.kind = v;
+                topic_entry.qos.reliability.kind = v;
 
                 if (qos_obj["reliability"].HasMember("max_blocking_time_sec") && qos_obj["reliability"]["max_blocking_time_sec"].IsNumber()) {
-                    topic_entry->qos.reliability.max_blocking_time.sec = qos_obj["reliability"]["max_blocking_time_sec"].GetUint64();
+                    topic_entry.qos.reliability.max_blocking_time.sec = qos_obj["reliability"]["max_blocking_time_sec"].GetUint64();
                 }
                 if (qos_obj["reliability"].HasMember("max_blocking_time_nanosec") && qos_obj["reliability"]["max_blocking_time_nanosec"].IsNumber()) {
-                    topic_entry->qos.reliability.max_blocking_time.nanosec = qos_obj["reliability"]["max_blocking_time_nanosec"].GetFloat();
+                    topic_entry.qos.reliability.max_blocking_time.nanosec = qos_obj["reliability"]["max_blocking_time_nanosec"].GetFloat();
                 }
             }
             if (qos_obj.HasMember("liveliness") && qos_obj["liveliness"].IsObject()) {
                 auto v = eval_liveliness_qos(qos_obj["liveliness"]["kind"].GetString());
                 assert(v != LIVELINESS_QOS_MAP.end() && "Invalid liveliness kind value.");
-                topic_entry->qos.liveliness.kind = v;
+                topic_entry.qos.liveliness.kind = v;
 
                 if (qos_obj["liveliness"].HasMember("lease_duration_sec") && qos_obj["liveliness"]["lease_duration_sec"].IsNumber()) {
-                    topic_entry->qos.liveliness.lease_duration.sec = qos_obj["liveliness"]["lease_duration_sec"].GetUint64();
+                    topic_entry.qos.liveliness.lease_duration.sec = qos_obj["liveliness"]["lease_duration_sec"].GetUint64();
                 }
                 if (qos_obj["liveliness"].HasMember("lease_duration_nanosec") && qos_obj["liveliness"]["lease_duration_nanosec"].IsNumber()) {
-                    topic_entry->qos.liveliness.lease_duration.nanosec = qos_obj["liveliness"]["lease_duration_nanosec"].GetUint64();
+                    topic_entry.qos.liveliness.lease_duration.nanosec = qos_obj["liveliness"]["lease_duration_nanosec"].GetUint64();
                 }
             }
             if (qos_obj.HasMember("durability") && qos_obj["durability"].IsObject()) {
                 auto v = eval_durability_qos(qos_obj["durability"]["kind"].GetString());
                 assert(v != DURABILITY_QOS_MAP.end() && "Invalid durability kind value");
-                topic_entry->qos.durability.kind = v;
+                topic_entry.qos.durability.kind = v;
             }
         }
 
         // NOTE(wesly): This can be simplified by storing nm directly
-        auto nm = topic_entry->idl_filename + std::string("_Message");
+        auto nm = topic_entry.idl_filename + std::string("_Message");
         auto tsf = typeSupportFactory.find(nm);
         if (tsf == typeSupportFactory.end()) {
             std::cerr << "ERROR: Cannot find topic name " << nm << ". Make sure idlFileName is exist inside /idl directory!" << std::endl;
@@ -343,7 +353,7 @@ int main(int argc, char* argv[]) {
         auto type_name = tsf->second.createTypeSupport();
         if (DDS::RETCODE_OK != type_name->register_type(participant, "")) throw std::runtime_error("register_type failed." );
 
-        auto topic = participant->create_topic(topic_entry->name, type_name->get_type_name(), topic_entry->qos, nullptr, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
+        auto topic = participant->create_topic(topic_entry.name, type_name->get_type_name(), topic_entry.qos, nullptr, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
         if (!topic) throw std::runtime_error("create_topic failed.");
 
         DDS::TopicQos configured_topic_qos;
@@ -357,10 +367,10 @@ int main(int argc, char* argv[]) {
 
         auto writer = publisher->create_datawriter(topic, writer_qos, nullptr, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
         if (!writer) throw std::runtime_error("create datawriter failed.");
-        topic_entry->write = std::move(tsf->second.bindWriter(writer));
-        topic_entry->write_string = std::move(tsf->second.bindStringWriter(writer));
+        topic_entry.write = std::move(tsf->second.bindWriter(writer));
+        topic_entry.write_string = std::move(tsf->second.bindStringWriter(writer));
 
-        topic_entry->generate_default_json_str = std::move(tsf->second.bindGenerator(writer));
+        topic_entry.generate_default_json_str = std::move(tsf->second.bindGenerator(writer));
 
         auto sub = participant->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
         DDS::DataReaderQos reader_qos;
@@ -370,10 +380,10 @@ int main(int argc, char* argv[]) {
         reader_qos.liveliness = configured_topic_qos.liveliness;
         sub->get_default_datareader_qos(reader_qos);
         // topic_entry->begin_read = std::move(tsf->second.bindReader(sub, topic, reader_qos));
-        topic_entry->sub = sub;
+        topic_entry.sub = sub;
 
-        std::cout << "Successfully added topic : " << topic_entry->name << std::endl;
-        ui_state.topics.push_back(std::move(topic_entry));
+        std::cout << "Successfully added topic : " << topic_entry.name << std::endl;
+        add_topic(ui_state, topic_entry);
     }
     std::cout << "Sucessfully initiate all topics. App is running..." << std::endl;
 

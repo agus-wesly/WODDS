@@ -106,15 +106,19 @@ void stop_worker(Worker &worker)
         worker.job.join();
 }
 
-void send_once(Topic &topic, Logs &logs, std::string_view json_data) 
+void send_once(const char *topic_name,
+        const std::function<bool(const char*)> topic_write_string,
+        Logs &logs,
+        std::string_view json_data) 
 {
-    if (topic.write_string(json_data.data())) {
-        logs_add(logs, topic.name, "publish success");
+    if (topic_write_string(json_data.data())) {
+        logs_add(logs, topic_name, "publish success");
     }
 }
 
 void start_publish(
-    Topic &topic,
+    const char* topic_name,
+    const std::function<bool(const char*)> topic_write_string,
     Worker &worker,
     Logs &logs,
     QosSettings qos,
@@ -125,17 +129,17 @@ void start_publish(
 
     const int delay_time_ms = 1000.0f / freqs;
 
-    if (!topic.write_string(json_data.data())) {
-        logs_add(logs, topic.name, "publish failed. Invalid JSON input data");
+    if (!topic_write_string(json_data.data())) {
+        logs_add(logs, topic_name, "publish failed. Invalid JSON input data");
         return;
     }
 
     worker.running = true;
-    worker.job = std::thread([&worker, topic, delay_time_ms, json_data, &logs]() mutable {
+    worker.job = std::thread([&worker, topic_name, topic_write_string, delay_time_ms, json_data, &logs]() mutable {
         while (worker.running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(delay_time_ms));
-            if (topic.write_string(json_data.data())) {
-                logs_add(logs, topic.name, "publish success");
+            if (topic_write_string(json_data.data())) {
+                logs_add(logs, topic_name, "publish success");
             }
         }
     });
@@ -216,7 +220,10 @@ void render_publisher(UIState &ui_state)
 
         assert(ui_state.active_section != -1);
         Section &section = *ui_state.sections[ui_state.active_section];
-        Topic &topic = *ui_state.topics[section.selected_topic];
+        const auto topic_count = ui_state.topics.name.size();
+        const char *selected_topic_name = ui_state.topics.name[section.selected_topic];
+        const auto selected_topic_generate_default_json_str_fn = ui_state.topics.generate_default_json_str[section.selected_topic];
+        const auto selected_topic_write_string_fn = ui_state.topics.write_string[section.selected_topic];
 
         ImGui::SetWindowFontScale(1.5f);
         ImGui::TextUnformatted("WOODS (Writer for OpenDDS)");
@@ -237,8 +244,8 @@ void render_publisher(UIState &ui_state)
             ImGui::SetNextItemWidth(inputWidth);
 
             const char* previewText = (section.selected_topic >= 0 &&
-                    section.selected_topic < (int)ui_state.topics.size())
-                ? ui_state.topics[section.selected_topic]->name
+                    section.selected_topic < (int)topic_count)
+                ? selected_topic_name
                 : "##none";
 
             if (ImGui::BeginCombo("##topic", previewText))
@@ -255,14 +262,14 @@ void render_publisher(UIState &ui_state)
                 ImGuiTextFilter filter(section.topic_filter);
                 filter.Build();
 
-                for (size_t i = 0; i < ui_state.topics.size(); ++i)
+                for (size_t i = 0; i < ui_state.topics.name.size(); ++i)
                 {
-                    auto &t = *ui_state.topics[i];
-                    if (!filter.PassFilter(t.name))
+                    const char *topic_name = ui_state.topics.name[i];
+                    if (!filter.PassFilter(topic_name))
                         continue;
 
                     bool isSelected = (section.selected_topic == i);
-                    if (ImGui::Selectable(t.name, isSelected))
+                    if (ImGui::Selectable(topic_name, isSelected))
                         section.selected_topic = i;
 
                     if (isSelected)
@@ -362,7 +369,7 @@ void render_publisher(UIState &ui_state)
                 {
                     if (!format_json_string(section.json_buffer)) 
                     {
-                        logs_add(section.logs, topic.name ,"format failed. Invalid JSON input data");
+                        logs_add(section.logs, selected_topic_name ,"format failed. Invalid JSON input data");
                     }
                 }
                 ImGui::SameLine();
@@ -370,7 +377,7 @@ void render_publisher(UIState &ui_state)
 
                 if (ImGui::Button("Generate", Vec2(width, 28)))
                 {
-                    section.json_buffer = topic.generate_default_json_str();
+                    section.json_buffer = selected_topic_generate_default_json_str_fn();
                     format_json_string(section.json_buffer);
                 }
                 ImGui::Spacing();
@@ -408,7 +415,9 @@ void render_publisher(UIState &ui_state)
                 if (ImGui::Button("Start Publish", Vec2(setButtonWidth, 40)))
                 {
                     start_publish(
-                            topic, worker, 
+                            selected_topic_name,
+                            selected_topic_write_string_fn,
+                            worker, 
                             section.logs, section.qos, section.json_buffer,
                             section.freqs);
                 }
@@ -419,7 +428,7 @@ void render_publisher(UIState &ui_state)
                 if (ImGui::Button("Stop Publish", Vec2(setButtonWidth, 40)))
                 {
                     stop_worker(worker);
-                    logs_add(section.logs, ui_state.topics[section.selected_topic]->name, "publisher stopped.");
+                    logs_add(section.logs, selected_topic_name, "publisher stopped.");
                 }
             }
             ImGui::PopStyleColor(2);
@@ -431,7 +440,10 @@ void render_publisher(UIState &ui_state)
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, BUTTON_BLUE_HOVERED);
                 if (ImGui::Button("Send Once", Vec2(setButtonWidth, 40)))
                 {
-                    send_once(topic, section.logs, section.json_buffer);
+                    send_once( 
+                        selected_topic_name, selected_topic_write_string_fn,
+                        section.logs, section.json_buffer
+                    );
                 }
                 ImGui::PopStyleColor(2);
             }
@@ -556,17 +568,18 @@ void render_subscriber(UIState &ui_state)
         // Selected Topic
         //----------------------------------
         {
+            const auto topic_name_count = ui_state.topics.name.size();
+
             ImGui::Text("Topic QoS");
             ImGui::SameLine(labelWidth*g_main_scale);
             ImGui::SetNextItemWidth(inputWidth);
 
-            const char *topicCStrs[ui_state.topics.size()];
-            for (int i = 0; i < ui_state.topics.size(); ++i)
+            const char *topicCStrs[topic_name_count];
+            for (int i = 0; i < ui_state.topics.name.size(); ++i)
             {
-                auto &t = *ui_state.topics[i];
-                topicCStrs[i] = t.name;
+                topicCStrs[i] = ui_state.topics.name[i];
             }
-            ImGui::Combo("##topic", &section.selected_topic, topicCStrs, static_cast<int>(ui_state.topics.size()));
+            ImGui::Combo("##topic", &section.selected_topic, topicCStrs, static_cast<int>(topic_name_count));
 
             ImGui::Spacing();
             ImGui::Spacing();
