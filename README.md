@@ -1,4 +1,4 @@
-# WOODS
+# WODDS
 
 Writer (publisher) for OpenDDS Topics
 
@@ -6,9 +6,9 @@ Writer (publisher) for OpenDDS Topics
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-brightgreen.svg)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
 
-WOODS is a tool that automatically generates OpenDDS publishers from IDL files. 
+WODDS is a tool that automatically generates OpenDDS publishers from IDL files. 
 
-Right now OpenDDS itself dont really have official tools for mock publishing. That's why I create WOODS.  
+Right now OpenDDS itself dont really have official tools for mock publishing. That's why I create WODDS.  
 
 It provides a user-friendly UI to dynamically configure QoS settings and publish data to OpenDDS topics in real-time.
 
@@ -42,8 +42,8 @@ It provides a user-friendly UI to dynamically configure QoS settings and publish
 
 ```bash
 # Clone the repository
-git clone https://github.com/agus-wesly/WOODS
-cd WOODS
+git clone https://github.com/agus-wesly/WODDS
+cd WODDS
 
 conan install . --output-folder=build-release  --build=missing -s build_type=Release
 cmake --preset conan-release -DCMAKE_BUILD_TYPE=Release --fresh
@@ -57,7 +57,7 @@ cd build
 
 ### Domain Participant Configuration
 
-WOODS requires an OpenDDS configuration file named **`rtps.ini`** in the parent directory of the executable. This file governs the local domain participant settings.
+WODDS requires an OpenDDS configuration file named **`rtps.ini`** in the parent directory of the executable. This file governs the local domain participant settings.
 
 ```ini
 # Example rtps.ini
@@ -85,7 +85,7 @@ This is configurable via a YAML configuration file.
 
 ### Topics Configuration
 
-WOODS reads a `topics.yaml` file at startup to configure topics. Each topic can be independently configured with custom QoS settings.
+WODDS reads a `topics.yaml` file at startup to configure topics. Each topic can be independently configured with custom QoS settings.
 
 ## Configuration File Format
 
@@ -188,7 +188,7 @@ WOODS reads a `topics.yaml` file at startup to configure topics. Each topic can 
    cmake --build . -j$(nproc)
    ```
 
-4. **Run WOODS**  
+4. **Run WODDS**  
    ```bash
    ./woods
    ```
@@ -202,7 +202,7 @@ WOODS reads a `topics.yaml` file at startup to configure topics. Each topic can 
         ↓
 3. Rebuild application (cmake --build ...)
         ↓
-4. Run WOODS executable
+4. Run WODDS executable
         ↓
 5. Use UI to publish messages
 ```
@@ -224,7 +224,7 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 ## 📧 Support
 
 For issues, questions, or suggestions:
-- 📝 Open an [Issue](https://github.com/agus-wesly/WOODS/issues)
-- 💬 Start a [Discussion](https://github.com/agus-wesly/WOODS/discussions)
+- 📝 Open an [Issue](https://github.com/agus-wesly/WODDS/issues)
+- 💬 Start a [Discussion](https://github.com/agus-wesly/WODDS/discussions)
 
 ---
