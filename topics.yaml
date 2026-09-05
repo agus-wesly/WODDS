@@ -1,0 +1,10 @@
+- name: Foo
+  idlFileName: Foo
+  qos:
+    reliability:
+      kind: best_effort
+      max_blocking_time_nanosec: 100e6
+    liveliness:
+      kind: manual_by_topic
+    durability:
+      kind: persistent
