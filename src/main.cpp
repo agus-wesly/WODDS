@@ -23,6 +23,10 @@
 #include <SDL3/SDL_opengl.h>
 #endif
 
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include "main.hpp"
 #include "generated.hpp"
 #include "imgui.h"
@@ -31,6 +35,161 @@
 
 #define CR_HOST
 #include "third_party/cr.h"
+
+const char *SAVED_STATE_PATH = "../state.json";
+
+void load_ui_state_from_json(UIState& ui_state) {
+    std::ifstream file(SAVED_STATE_PATH);
+    if (!file.is_open()) return;
+
+    std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    rapidjson::Document doc;
+    if (doc.Parse(json.c_str()).HasParseError()) return;
+
+    // Parse Topics
+    if (!doc.HasMember("topics") || !doc["topics"].IsArray()) return;
+    ui_state.sections.clear();
+    for (const auto& root_obj : doc["topics"].GetArray()) {
+        if (!root_obj.IsObject()) continue;
+
+        Section s{};
+
+        // Basic fields
+        if (root_obj.HasMember("id") && root_obj["id"].IsUint()) {
+            s.id = root_obj["id"].GetUint();
+        }
+        if (root_obj.HasMember("name") && root_obj["name"].IsString()) {
+            std::strncpy(s.name, root_obj["name"].GetString(), sizeof(s.name) - 1);
+            s.name[sizeof(s.name) - 1] = '\0';
+        }
+        if (root_obj.HasMember("selected_topic") && root_obj["selected_topic"].IsInt()) {
+            s.selected_topic = root_obj["selected_topic"].GetInt();
+        }
+        if (root_obj.HasMember("selected_qos") && root_obj["selected_qos"].IsInt()) {
+            s.selected_qos = root_obj["selected_qos"].GetInt();
+        }
+        if (root_obj.HasMember("file_path") && root_obj["file_path"].IsString()) {
+            std::strncpy(s.filePath, root_obj["file_path"].GetString(), sizeof(s.filePath) - 1);
+            s.filePath[sizeof(s.filePath) - 1] = '\0';
+        }
+        if (root_obj.HasMember("topic_filter") && root_obj["topic_filter"].IsString()) {
+            std::strncpy(s.topic_filter, root_obj["topic_filter"].GetString(), sizeof(s.topic_filter) - 1);
+            s.topic_filter[sizeof(s.topic_filter) - 1] = '\0';
+        }
+        if (root_obj.HasMember("json_buffer") && root_obj["json_buffer"].IsString()) {
+            s.json_buffer = root_obj["json_buffer"].GetString();
+        }
+        if (root_obj.HasMember("freqs") && root_obj["freqs"].IsNumber()) {
+            s.freqs = root_obj["freqs"].GetFloat();
+        }
+
+        // QoS
+        if (root_obj.HasMember("qos") && root_obj["qos"].IsObject()) {
+            const auto& qos = root_obj["qos"];
+            if (qos.HasMember("reliability") && qos["reliability"].IsInt()) {
+                s.qos.reliability = static_cast<Reliability>(qos["reliability"].GetInt());
+            }
+            if (qos.HasMember("durability") && qos["durability"].IsInt()) {
+                s.qos.durability = static_cast<Durability>(qos["durability"].GetInt());
+            }
+        }
+
+        // Logs
+        if (root_obj.HasMember("logs") && root_obj["logs"].IsObject()) {
+            const auto& logs = root_obj["logs"];
+
+            if (logs.HasMember("items") && logs["items"].IsArray()) {
+                const auto arr = logs["items"].GetArray();
+                for (size_t i = 0; i < arr.Size(); ++i) {
+                    const auto &item = arr[i];
+                    LogEntry log_entry{};
+
+                    if (item.HasMember("time") && item["time"].IsString()) {
+                        std::strncpy(log_entry.time, item["time"].GetString(), sizeof(log_entry.time) - 1);
+                        log_entry.time[sizeof(log_entry.time) - 1] = '\0';
+                    }
+                    if (item.HasMember("message") && item["message"].IsString()) {
+                        std::strncpy(log_entry.message, item["message"].GetString(), sizeof(log_entry.message) - 1);
+                        log_entry.message[sizeof(log_entry.message) - 1] = '\0';
+                    }
+                    s.logs.items[i] = log_entry;
+                }
+            }
+
+            if (logs.HasMember("index") && logs["index"].IsInt()) {
+                s.logs.index = logs["index"].GetInt();
+            }
+
+            if (logs.HasMember("n") && logs["n"].IsInt()) {
+                s.logs.n = logs["n"].GetInt();
+            }
+        }
+        ui_state.sections.push_back(std::move(s));
+    }
+    ui_state.active_section = static_cast<int>(ui_state.sections.size()) - 1;
+
+    if (doc.HasMember("main_scale") && doc["main_scale"].IsFloat()) {
+        ui_state.main_scale = doc["main_scale"].GetFloat();
+    }
+    if (doc.HasMember("active_section") && doc["active_section"].IsInt()) {
+        ui_state.active_section = doc["active_section"].GetInt();
+    }
+}
+
+void save_ui_state_to_json(const UIState &ui_state) {
+    rapidjson::Document doc;
+    doc.SetObject();
+    auto &allocator = doc.GetAllocator();
+
+    rapidjson::Value root_arr(rapidjson::kObjectType);
+    root_arr.SetArray();
+
+    for (const auto &s: ui_state.sections) {
+        rapidjson::Value root_sections(rapidjson::kObjectType);
+        root_sections.AddMember("id", s.id, allocator);
+        root_sections.AddMember(
+            "name",
+            rapidjson::Value(s.name, allocator),
+            allocator
+        );
+        root_sections.AddMember("selected_topic", s.selected_topic, allocator);
+        root_sections.AddMember("selected_qos", s.selected_qos, allocator);
+        root_sections.AddMember("file_path", rapidjson::Value(s.filePath, allocator), allocator);
+        root_sections.AddMember("topic_filter", rapidjson::Value(s.topic_filter, allocator), allocator);
+        root_sections.AddMember("json_buffer", rapidjson::Value(s.json_buffer.c_str(), allocator), allocator);
+        root_sections.AddMember("freqs", s.freqs, allocator);
+
+        rapidjson::Value qos_obj(rapidjson::kObjectType);
+        qos_obj.AddMember("reliability", s.qos.reliability, allocator);
+        qos_obj.AddMember("durability", s.qos.durability, allocator);
+        root_sections.AddMember("qos", qos_obj, allocator);
+
+        rapidjson::Value log_obj(rapidjson::kObjectType);
+        {
+            rapidjson::Value log_items_arr(rapidjson::kArrayType);
+            for (const auto &l: s.logs.items) {
+                rapidjson::Value log_item_obj(rapidjson::kObjectType);
+                log_item_obj.AddMember("time", rapidjson::Value(l.time, allocator), allocator);
+                log_item_obj.AddMember("message", rapidjson::Value(l.message, allocator), allocator);
+                log_items_arr.PushBack(log_item_obj, allocator);
+            }
+            log_obj.AddMember("items", log_items_arr, allocator);
+            log_obj.AddMember("index", s.logs.index, allocator);
+            log_obj.AddMember("n", s.logs.n, allocator);
+        }
+        root_sections.AddMember("logs", log_obj, allocator);
+        root_arr.PushBack(root_sections, allocator);
+    }
+    doc.AddMember("topics", root_arr, allocator);
+    doc.AddMember("main_scale", ui_state.main_scale, allocator);
+    doc.AddMember("active_section", ui_state.active_section, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    std::ofstream file(SAVED_STATE_PATH);
+    file << buffer.GetString();
+}
 
 void init_ui(UIState &ui_state) {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
@@ -50,7 +209,6 @@ void init_ui(UIState &ui_state) {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    ui_state.main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
     SDL_Window *window = SDL_CreateWindow("WOODS", (int)(1280 * ui_state.main_scale), (int)(800 * ui_state.main_scale), window_flags);
     if (window == nullptr)
@@ -162,6 +320,9 @@ void init_ui(UIState &ui_state) {
                 if (ctrl && (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS)) ui_state.main_scale -= 0.1f;
                 ui_state.main_scale = SDL_clamp(ui_state.main_scale, 0.5f, 3.0f);
                 style.FontSizeBase = 16.0f * ui_state.main_scale;
+
+                // Handle Save Layout (CTRL+S)
+                if (ctrl && (event.key.key == SDLK_S)) save_ui_state_to_json(ui_state);
 
             }
         }
@@ -393,9 +554,10 @@ int main(int argc, char* argv[]) {
         std::cout << "Successfully added topic : " << topic_entry.name << std::endl;
         add_topic(ui_state, topic_entry);
     }
-
     std::cout << "Sucessfully initiate all topics. App is running..." << std::endl;
 
+    load_ui_state_from_json(ui_state);
+    std::cout << "Zoom scale after load " << ui_state.main_scale << std::endl;
     init_ui(ui_state);
 
     participant->delete_contained_entities();

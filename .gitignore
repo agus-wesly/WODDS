@@ -4,3 +4,4 @@ build-release
 example.txt
 src/generated.hpp
 TODOS.txt
+state.json

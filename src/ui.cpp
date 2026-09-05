@@ -39,8 +39,6 @@ CR_EXPORT int cr_main(
     return 0;
 }
 
-static uint16_t global_section_id = 0;
-
 const auto BUTTON_GREEN         = ImVec4(0.35f, 0.65f, 0.45f, 1.0f);
 const auto BUTTON_GREEN_HOVERED = ImVec4(0.40f, 0.70f, 0.50f, 1.0f);
 const auto BUTTON_RED           = ImVec4(0.15f, 0.05f, 0.05f, 1.0f);
@@ -145,6 +143,26 @@ void start_publish(
     });
 }
 
+uint16_t generate_id(const UIState& ui_state)
+{
+    for (uint32_t id = 0; id <= UINT16_MAX; ++id) {
+        bool used = false;
+
+        for (const auto& section : ui_state.sections) {
+            if (section.id == id) {
+                used = true;
+                break;
+            }
+        }
+
+        if (!used) {
+            return static_cast<uint16_t>(id);
+        }
+    }
+
+    throw std::runtime_error("No available section ID");
+}
+
 void render_sidebar(UIState &ui_state)
 {
     if (ImGui::Begin("Sidebar"))
@@ -160,7 +178,7 @@ void render_sidebar(UIState &ui_state)
         if (ImGui::Button("+", Vec2(buttonSize, buttonSize)))
         {
             Section new_section;
-            const uint16_t new_id = global_section_id++;
+            const uint16_t new_id = generate_id(ui_state);
             new_section.id = new_id;
             StringFormat(new_section.name, sizeof(new_section.name), "Section %02d", new_id);
             ui_state.sections.push_back(new_section);
