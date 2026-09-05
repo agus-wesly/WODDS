@@ -1,8 +1,3 @@
-#ifndef RYML_SINGLE_HEADER_AMALGAMATED_HPP_
-#define RYML_SINGLE_HDR_DEFINE_NOW
-#include "third_party/rapidyaml/rapidyaml.hpp"
-#endif
-
 #include <dds/DCPS/Service_Participant.h>
 #include <dds/DCPS/Marked_Default_Qos.h>
 #include <dds/DCPS/WaitSet.h>
@@ -16,6 +11,8 @@
 #include <dlfcn.h>
 #include <filesystem>
 #include <stdio.h>
+#include "ryml_std.hpp"
+#include "ryml.hpp"
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL3/SDL_opengles2.h>

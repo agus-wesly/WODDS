@@ -126,6 +126,6 @@ add_dependencies(${PROJECT_NAME} generate_script)
 # ------------------------------------------------------------------
 # Conan Dependencies
 # ------------------------------------------------------------------
-# find_package(Boost CONFIG REQUIRED)
-# target_link_libraries(${PROJECT_NAME} PRIVATE Boost::boost)
-# include_directories(${Boost_INCLUDE_DIR})
+find_package(ryml REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE ryml::ryml)
+include_directories(${ryml_INCLUDE_DIR})
