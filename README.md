@@ -15,7 +15,7 @@ It provides a user-friendly UI to dynamically configure QoS settings and publish
 ## Features
 
 - 🚀 **Automatic Publisher Generation** – Generate OpenDDS publishers from IDL files automatically
-- ⚙️ **Dynamic QoS Configuration** – Configure Quality of Service settings per topic via `topics.json`
+- ⚙️ **Dynamic QoS Configuration** – Configure Quality of Service settings per topic via `topics.yamlj`
 - 🎨 **Interactive UI** – Intuitive graphical interface for managing multiple topics
 - 📊 **Real-time Publishing** – Publish messages with configurable frequency
 
@@ -81,75 +81,67 @@ DomainParticipantFactory::get_instance()->create_participant(
 );
 ```
 
-This will be made configurable via configuration file in a future release.
+This is configurable via a YAML configuration file.
 
 ### Topics Configuration
 
-WOODS reads a `topics.json` file at startup to configure topics. Each topic can be independently configured with custom QoS settings.
+WOODS reads a `topics.yaml` file at startup to configure topics. Each topic can be independently configured with custom QoS settings.
 
 ## Configuration File Format
 
-```json
-[
-  {
-    "name": "Foo",
-    "idlFileName": "Foo",
-    "qos": {
-      "reliability": {
-        "kind": "best_effort",
-        "max_blocking_time_sec": 2,
-        "max_blocking_time_nanosec": 1e8
-      },
-      "liveliness": {
-        "kind": "manual_by_topic",
-        "lease_duration_sec": 5,
-        "lease_duration_nanosec": 1e6
-      },
-      "durability": {
-        "kind": "persistent"
-      }
-    }
-  }
-]
+```yaml
+- name: Foo
+  idlFileName: Foo
+  qos:
+    reliability:
+      kind: best_effort
+      max_blocking_time_sec: 2
+      max_blocking_time_nanosec: 1e8
+    liveliness:
+      kind: manual_by_topic
+      lease_duration_sec: 5
+      lease_duration_nanosec: 1e6
+    durability:
+      kind: persistent
 ```
 
 #### Configuration Parameters
 
-| Parameter | Type | Description |
-|---|---|---|
-| `name` | string | Topic name (must match IDL type name) |
+| Parameter     | Type   | Description                                                                     |
+| ------------- | ------ | ------------------------------------------------------------------------------- |
+| `name`        | string | Topic name (must match IDL type name)                                           |
 | `idlFileName` | string | IDL file name without `.idl` extension; file must exist in the `idl/` directory |
-| `qos` | object | Quality of Service settings for the topic |
+| `qos`         | object | Quality of Service settings for the topic                                       |
 
 #### Supported QoS Settings
 
-| QoS Policy | Supported Values | Default |
-|---|---|---|
-| **reliability** | `reliable`, `best_effort` | `best_effort` |
-| **liveliness** | `manual_by_topic`, `automatic` | `automatic` |
-| **durability** | `volatile`, `persistent`, `transient` | `volatile` |
+| QoS Policy      | Supported Values                      | Default       |
+| --------------- | ------------------------------------- | ------------- |
+| **reliability** | `reliable`, `best_effort`             | `best_effort` |
+| **liveliness**  | `manual_by_topic`, `automatic`        | `automatic`   |
+| **durability**  | `volatile`, `persistent`, `transient` | `volatile`    |
 
 #### Reliability Parameters
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `kind` | string | Yes | Reliability kind. Supported values are `reliable` and `best_effort`. |
-| `max_blocking_time_sec` | number | No | Maximum blocking time in seconds. |
-| `max_blocking_time_nanosec` | number | No | Additional maximum blocking time in nanoseconds. |
+| Parameter                   | Type   | Required | Description                                                          |
+| --------------------------- | ------ | -------- | -------------------------------------------------------------------- |
+| `kind`                      | string | Yes      | Reliability kind. Supported values are `reliable` and `best_effort`. |
+| `max_blocking_time_sec`     | number | No       | Maximum blocking time in seconds.                                    |
+| `max_blocking_time_nanosec` | number | No       | Additional maximum blocking time in nanoseconds.                     |
 
 #### Liveliness Parameters
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `kind` | string | Yes | Liveliness kind. Supported values are `manual_by_topic` and `automatic`. |
-| `lease_duration_sec` | number | No | Liveliness lease duration in seconds. |
-| `lease_duration_nanosec` | number | No | Additional liveliness lease duration in nanoseconds. |
+| Parameter                | Type   | Required | Description                                                              |
+| ------------------------ | ------ | -------- | ------------------------------------------------------------------------ |
+| `kind`                   | string | Yes      | Liveliness kind. Supported values are `manual_by_topic` and `automatic`. |
+| `lease_duration_sec`     | number | No       | Liveliness lease duration in seconds.                                    |
+| `lease_duration_nanosec` | number | No       | Additional liveliness lease duration in nanoseconds.                     |
 
 #### Durability Parameters
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `kind` | string | Yes | Durability kind. Supported values are `volatile`, `persistent`, and `transient`. |
+| Parameter | Type   | Required | Description                                                                      |
+| --------- | ------ | -------- | -------------------------------------------------------------------------------- |
+| `kind`    | string | Yes      | Durability kind. Supported values are `volatile`, `persistent`, and `transient`. |
 
 ## 📖 Usage Guide
 
@@ -170,28 +162,20 @@ WOODS reads a `topics.json` file at startup to configure topics. Each topic can 
    > [!WARNING]
    > Note that idl's filename must match the idl module name. In above case `module Message` corressponds to `Message.idl` filename.
 
-2. **Update `topics.json`**  
-   Add a new topic entry with desired QoS settings. For example :
+2. **Update `topics.yaml`**
+   Add a new topic entry with the desired QoS settings. For example:
 
-```json
-[
-  {
-    "name": "MessageTopic",
-    "idlFileName": "Message",
-    "qos": {
-      "reliability": {
-        "kind": "best_effort",
-        "max_blocking_time_nanosec": 1e8
-      },
-      "liveliness": {
-        "kind": "manual_by_topic"
-      },
-      "durability": {
-        "kind": "persistent"
-      }
-    }
-  }
-]
+```yaml
+- name: MessageTopic
+  idlFileName: Message
+  qos:
+    reliability:
+      kind: best_effort
+      max_blocking_time_nanosec: 1e8
+    liveliness:
+      kind: manual_by_topic
+    durability:
+      kind: persistent
 ```
 
 3. **Rebuild the Application**  
@@ -214,7 +198,7 @@ WOODS reads a `topics.json` file at startup to configure topics. Each topic can 
 ```
 1. Define IDL types in idl/
         ↓
-2. Configure topics in topics.json
+2. Configure topics in topics.yaml
         ↓
 3. Rebuild application (cmake --build ...)
         ↓

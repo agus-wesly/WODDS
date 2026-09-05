@@ -1,3 +1,8 @@
+#ifndef RYML_SINGLE_HEADER_AMALGAMATED_HPP_
+#define RYML_SINGLE_HDR_DEFINE_NOW
+#include "third_party/rapidyaml/rapidyaml.hpp"
+#endif
+
 #include <dds/DCPS/Service_Participant.h>
 #include <dds/DCPS/Marked_Default_Qos.h>
 #include <dds/DCPS/WaitSet.h>
@@ -5,8 +10,6 @@
 #include <dds/DCPS/JsonValueWriter.h>
 #include <dds/DCPS/BuiltInTopicUtils.h>
 #include <dds/DCPS/XTypes/DynamicTypeSupport.h>
-#include <rapidjson/document.h>
-#include <rapidjson/error/en.h>
 #include <optional>
 #include <thread>
 #include <SDL3/SDL.h>
@@ -279,65 +282,70 @@ int main(int argc, char* argv[]) {
     }
 
     // Setup Topics from config
-    std::string path = "../topics.json";
-    std::ifstream ifs(path);
-    if (!ifs.is_open()) throw std::runtime_error("Could not open file " + path);
-    std::stringstream buff;
-    buff << ifs.rdbuf();
-    auto json_str = buff.str();
+    const std::string yaml_path = "../topics.yaml";
+    std::ifstream ifs(yaml_path, std::ios::binary);
+    if (!ifs.is_open()) {
+        throw std::runtime_error("Could not open file " + yaml_path);
+    }
 
-    rapidjson::Document doc;
-    rapidjson::ParseResult ok = doc.Parse(json_str.c_str());
+    std::string yaml_content(
+        (std::istreambuf_iterator<char>(ifs)),
+        std::istreambuf_iterator<char>()
+    );
 
-    if (!ok) throw std::runtime_error(std::string("JSON parse error") + GetParseError_En(ok.Code()));
-    if (!doc.IsArray()) throw std::runtime_error("Root JSON must be an array");
+    ryml::Tree tree = ryml::parse_in_place(ryml::to_substr(yaml_content));
 
     UIState ui_state{};
-    // ui_state.topics.reserve(doc.Size());
-
-    for (auto& item: doc.GetArray()) {
-        if (!item.IsObject()) throw std::runtime_error("Must be an object");
+    for (ryml::NodeRef item: tree.rootref()) {
+        if (!item.is_map()) throw std::runtime_error("Must be an object");
 
         Topic topic_entry{};
         participant->get_default_topic_qos(topic_entry.qos);
 
-        if (item.HasMember("name") && item["name"].IsString()) {
-            topic_entry.name = item["name"].GetString();
+        if (item.has_child("name")) {
+            const auto val = item["name"].val();
+            char *ptr = new char[val.len + 1]; std::memcpy(ptr, val.str, val.len); ptr[val.len] = '\0';
+            topic_entry.name = ptr;
         }
-        if (item.HasMember("idlFileName") && item["idlFileName"].IsString()) {
-            topic_entry.idl_filename = item["idlFileName"].GetString();
+        if (item.has_child("idlFileName")) {
+            const auto val = item["idlFileName"].val();
+            char *ptr = new char[val.len + 1]; std::memcpy(ptr, val.str, val.len); ptr[val.len] = '\0';
+            topic_entry.idl_filename = ptr;
         }
-        if (item.HasMember("qos") && item["qos"].IsObject()) {
-            auto qos_obj = item["qos"].GetObject();
+        if (item.has_child("qos") && item["qos"].is_map()) {
+            auto qos_obj = item["qos"];
 
-            if (qos_obj.HasMember("reliability") && qos_obj["reliability"].IsObject()) {
-                auto v = eval_reliability_qos(qos_obj["reliability"]["kind"].GetString());
-                // TODO(wesly): When error, provide available correct values for each QoS.
-                assert (v != RELIABILITY_QOS_MAP.end() && "Invalid reliability kind value.");
+            if (qos_obj.has_child("reliability") && qos_obj["reliability"].is_map()) {
+                const auto val = qos_obj["reliability"]["kind"].val();
+                auto v = eval_reliability_qos(std::string_view(val.str, val.len));
                 topic_entry.qos.reliability.kind = v;
 
-                if (qos_obj["reliability"].HasMember("max_blocking_time_sec") && qos_obj["reliability"]["max_blocking_time_sec"].IsNumber()) {
-                    topic_entry.qos.reliability.max_blocking_time.sec = qos_obj["reliability"]["max_blocking_time_sec"].GetUint64();
+                if (qos_obj["reliability"].has_child("max_blocking_time_sec")) {
+                    const auto val = qos_obj["reliability"]["max_blocking_time_sec"].val();
+                    topic_entry.qos.reliability.max_blocking_time.sec = std::stod(std::string(val.str,val.len));
                 }
-                if (qos_obj["reliability"].HasMember("max_blocking_time_nanosec") && qos_obj["reliability"]["max_blocking_time_nanosec"].IsNumber()) {
-                    topic_entry.qos.reliability.max_blocking_time.nanosec = qos_obj["reliability"]["max_blocking_time_nanosec"].GetFloat();
+                if (qos_obj["reliability"].has_child("max_blocking_time_nanosec")) {
+                    const auto val = qos_obj["reliability"]["max_blocking_time_nanosec"].val();
+                    topic_entry.qos.reliability.max_blocking_time.nanosec = std::stod(std::string(val.str,val.len));
                 }
             }
-            if (qos_obj.HasMember("liveliness") && qos_obj["liveliness"].IsObject()) {
-                auto v = eval_liveliness_qos(qos_obj["liveliness"]["kind"].GetString());
-                assert(v != LIVELINESS_QOS_MAP.end() && "Invalid liveliness kind value.");
+            if (qos_obj.has_child("liveliness") && qos_obj["liveliness"].is_map()) {
+                const auto val = qos_obj["liveliness"]["kind"].val();
+                const auto v = eval_liveliness_qos(std::string_view(val.str, val.len));
                 topic_entry.qos.liveliness.kind = v;
 
-                if (qos_obj["liveliness"].HasMember("lease_duration_sec") && qos_obj["liveliness"]["lease_duration_sec"].IsNumber()) {
-                    topic_entry.qos.liveliness.lease_duration.sec = qos_obj["liveliness"]["lease_duration_sec"].GetUint64();
+                if (qos_obj["liveliness"].has_child("lease_duration_sec")) {
+                    const auto val = qos_obj["liveliness"]["lease_duration_sec"].val();
+                    topic_entry.qos.liveliness.lease_duration.sec = std::stod(std::string(val.str, val.len));
                 }
-                if (qos_obj["liveliness"].HasMember("lease_duration_nanosec") && qos_obj["liveliness"]["lease_duration_nanosec"].IsNumber()) {
-                    topic_entry.qos.liveliness.lease_duration.nanosec = qos_obj["liveliness"]["lease_duration_nanosec"].GetUint64();
+                if (qos_obj["liveliness"].has_child("lease_duration_nanosec")) {
+                    const auto val = qos_obj["liveliness"]["lease_duration_nanosec"].val();
+                    topic_entry.qos.liveliness.lease_duration.nanosec = std::stod(std::string(val.str, val.len));
                 }
             }
-            if (qos_obj.HasMember("durability") && qos_obj["durability"].IsObject()) {
-                auto v = eval_durability_qos(qos_obj["durability"]["kind"].GetString());
-                assert(v != DURABILITY_QOS_MAP.end() && "Invalid durability kind value");
+            if (qos_obj.has_child("durability") && qos_obj["durability"].is_map()) {
+                const auto val = qos_obj["durability"]["kind"].val();
+                auto v = eval_durability_qos(std::string_view(val.str, val.len));
                 topic_entry.qos.durability.kind = v;
             }
         }
@@ -385,6 +393,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Successfully added topic : " << topic_entry.name << std::endl;
         add_topic(ui_state, topic_entry);
     }
+
     std::cout << "Sucessfully initiate all topics. App is running..." << std::endl;
 
     init_ui(ui_state);
