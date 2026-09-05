@@ -597,7 +597,6 @@ int main(int argc, char* argv[]) {
     std::cout << "Sucessfully initiate all topics. App is running..." << std::endl;
 
     load_ui_state_from_json(ui_state);
-    std::cout << "Zoom scale after load " << ui_state.main_scale << std::endl;
     init_ui(ui_state);
 
     participant->delete_contained_entities();
