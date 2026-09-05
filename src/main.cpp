@@ -34,6 +34,46 @@
 #include "third_party/cr.h"
 
 const char *SAVED_STATE_PATH = "../state.json";
+static Toast toast;
+
+void show_toast(std::string_view message, float duration = 2.0f) {
+    std::strncpy(toast.message, message.data(), sizeof(toast.message) - 1);
+    toast.duration = duration;
+    toast.timer = duration;
+    toast.is_visible = true;
+}
+
+void render_toast(float deltatime) {
+    if (!toast.is_visible) return;
+
+    toast.timer -= deltatime;
+    if (toast.timer <= 0) {
+        toast.is_visible = false;
+        return;
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 windowPos(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 60.0f);
+
+    ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16, 12));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.15f, 0.15f, 0.17f, 0.95f)); // dark gray, not pure black
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.35f, 0.65f, 1.0f, 0.6f));     // subtle blue border
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.95f, 0.95f, 1.0f));
+
+    ImGui::Begin("##Toast", nullptr,
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+            ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoInputs);
+    ImGui::TextUnformatted(toast.message);
+    ImGui::End();
+
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar(4);
+}
 
 void load_ui_state_from_json(UIState& ui_state) {
     std::ifstream file(SAVED_STATE_PATH);
@@ -319,8 +359,10 @@ void init_ui(UIState &ui_state) {
                 style.FontSizeBase = 16.0f * ui_state.main_scale;
 
                 // Handle Save Layout (CTRL+S)
-                if (ctrl && (event.key.key == SDLK_S)) save_ui_state_to_json(ui_state);
-
+                if (ctrl && (event.key.key == SDLK_S)) {
+                    save_ui_state_to_json(ui_state);
+                    show_toast("Layout saved !");
+                } 
             }
         }
         // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppIterate() function]
@@ -337,6 +379,7 @@ void init_ui(UIState &ui_state) {
         ImGui::DockSpaceOverViewport();
 
         // Call the UI::Draw method
+        render_toast(io.DeltaTime);
         cr_plugin_update(plugin);
 
         // Rendering

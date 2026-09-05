@@ -92,3 +92,10 @@ struct UIState {
     int16_t active_section = -1;
     float main_scale = 1.0f;
 };
+
+struct Toast {
+    bool is_visible = false;
+    char message[512];
+    float timer = 0.0f;
+    float duration = 2.0f;
+};
