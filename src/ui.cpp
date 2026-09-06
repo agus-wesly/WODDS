@@ -111,6 +111,8 @@ void send_once(const char *topic_name,
 {
     if (topic_write_string(json_data.data())) {
         logs_add(&logs, topic_name, "publish success");
+    } else {
+        logs_add(&logs, topic_name, "publish failed. Invalid JSON input data");
     }
 }
 
