@@ -75,7 +75,6 @@ void log_entry_set_time(char* out)
 }
 
 void logs_add(Logs *l, const char* topic_name, const char* reason) {
-    std::cout << "Log Called" << std::endl;
     LogEntry &e = l->items[l->index];
     log_entry_set_time(e.time);
 
@@ -177,7 +176,7 @@ void render_sidebar(UIState &ui_state)
         if (ImGui::Button("+", Vec2(buttonSize, buttonSize)))
         {
             Section new_section;
-            const uint16_t new_id = ++ui_state.latest_id;
+            const uint16_t new_id = ui_state.latest_id++;
             new_section.id = new_id;
             StringFormat(new_section.name, sizeof(new_section.name), "New Section");
             ui_state.sections.push_back(new_section);

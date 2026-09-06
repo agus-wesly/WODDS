@@ -92,10 +92,8 @@ void load_ui_state_from_json(UIState& ui_state) {
         Section s{};
 
         // Basic fields
-        if (root_obj.HasMember("id") && root_obj["id"].IsUint()) {
-            s.id = root_obj["id"].GetUint();
-            ui_state.latest_id = s.id;
-        }
+        s.id = ui_state.latest_id++;
+
         if (root_obj.HasMember("name") && root_obj["name"].IsString()) {
             std::strncpy(s.name, root_obj["name"].GetString(), sizeof(s.name) - 1);
             s.name[sizeof(s.name) - 1] = '\0';
@@ -185,7 +183,6 @@ void save_ui_state_to_json(const UIState &ui_state) {
 
     for (const auto &s: ui_state.sections) {
         rapidjson::Value root_sections(rapidjson::kObjectType);
-        root_sections.AddMember("id", s.id, allocator);
         root_sections.AddMember(
             "name",
             rapidjson::Value(s.name, allocator),
