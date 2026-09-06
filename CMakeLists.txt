@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.31.0)
-project(opendds-publisher-v2 VERSION 0.1.0 LANGUAGES C CXX)
+project(wodds VERSION 0.1.0 LANGUAGES C CXX)
 
 # Compiler options
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

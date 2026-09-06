@@ -45,11 +45,11 @@ It provides a user-friendly UI to dynamically configure QoS settings and publish
 git clone https://github.com/agus-wesly/WODDS
 cd WODDS
 
-conan install . --output-folder=build-release  --build=missing -s build_type=Release
+conan install . --output-folder=build  --build=missing -s build_type=Release
 cmake --preset conan-release -DCMAKE_BUILD_TYPE=Release --fresh
-cmake --build build-release -j$(nproc)
+cmake --build build -j$(nproc)
 cd build
-./woods
+./wodds
 
 ```
 
@@ -190,7 +190,7 @@ WODDS reads a `topics.yaml` file at startup to configure topics. Each topic can 
 
 4. **Run WODDS**  
    ```bash
-   ./woods
+   ./wodds
    ```
 
 ## 🔄 Workflow Summary
