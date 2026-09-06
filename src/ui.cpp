@@ -74,15 +74,16 @@ void log_entry_set_time(char* out)
 	StringFormat(out, sizeof(out), "%02d:%02d:%02d", local_tm.tm_hour, local_tm.tm_min, local_tm.tm_sec);
 }
 
-void logs_add(Logs &l, const char* topic_name, const char* reason) {
-    LogEntry &e = l.items[l.index];
+void logs_add(Logs *l, const char* topic_name, const char* reason) {
+    std::cout << "Log Called" << std::endl;
+    LogEntry &e = l->items[l->index];
     log_entry_set_time(e.time);
 
 	StringFormat(e.message, sizeof(e.message), "[%s] %s", topic_name, reason);
-    ++l.index;
+    ++l->index;
 
-    if (l.index == MAX_LOG_ITEM) l.index = l.index % MAX_LOG_ITEM;
-    if (l.n < MAX_LOG_ITEM) ++l.n;
+    if (l->index == MAX_LOG_ITEM) l->index = l->index % MAX_LOG_ITEM;
+    if (l->n < MAX_LOG_ITEM) ++l->n;
 }
 
 bool format_json_string(std::string &str) 
@@ -97,7 +98,7 @@ bool format_json_string(std::string &str)
     return true;
 }
 
-void stop_worker(Worker &worker)
+void stop_publish(Worker &worker)
 {
     worker.running = false;
     if (worker.job.joinable())
@@ -110,57 +111,55 @@ void send_once(const char *topic_name,
         std::string_view json_data) 
 {
     if (topic_write_string(json_data.data())) {
-        logs_add(logs, topic_name, "publish success");
+        logs_add(&logs, topic_name, "publish success");
     }
 }
 
 void start_publish(
+    std::vector<Section>& sections,
+    std::unordered_map<uint16_t, Worker>& workers,
+    uint16_t section_id,
     const char* topic_name,
     const std::function<bool(const char*)> topic_write_string,
-    Worker &worker,
-    Logs &logs,
     QosSettings qos,
     std::string_view json_data,
     float freqs)
 {
+    auto worker_it = workers.find(section_id);
+    if (worker_it == workers.end()) return;
+
+    Worker& worker = worker_it->second;
     if (worker.running) return;
 
-    const int delay_time_ms = 1000.0f / freqs;
+    auto section_it = std::find_if(sections.begin(), sections.end(), [section_id](const Section& s) {
+        return s.id == section_id;
+    });
+    assert(section_it != sections.end());
+    Section &section = *section_it;
+    Logs *logs = &section.logs;
 
     if (!topic_write_string(json_data.data())) {
         logs_add(logs, topic_name, "publish failed. Invalid JSON input data");
         return;
     }
-
+    const int delay_time_ms = 1000.0f / freqs;
     worker.running = true;
-    worker.job = std::thread([&worker, topic_name, topic_write_string, delay_time_ms, json_data, &logs]() mutable {
-        while (worker.running) {
+    worker.job = std::thread([&workers, &sections, section_id, topic_name, topic_write_string, delay_time_ms, json_data]() mutable {
+        while (workers.at(section_id).running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(delay_time_ms));
-            if (topic_write_string(json_data.data())) {
-                logs_add(logs, topic_name, "publish success");
+
+            auto section_it = std::find_if(sections.begin(), sections.end(), [section_id](const Section& s) {
+                return s.id == section_id;
+            });
+            if (section_it != sections.end()) {
+                Section &section = *section_it;
+                Logs *logs = &section.logs;
+                if (topic_write_string(json_data.data())) {
+                    logs_add(logs, topic_name, "publish success");
+                }
             }
         }
     });
-}
-
-uint16_t generate_id(const UIState& ui_state)
-{
-    for (uint32_t id = 0; id <= UINT16_MAX; ++id) {
-        bool used = false;
-
-        for (const auto& section : ui_state.sections) {
-            if (section.id == id) {
-                used = true;
-                break;
-            }
-        }
-
-        if (!used) {
-            return static_cast<uint16_t>(id);
-        }
-    }
-
-    throw std::runtime_error("No available section ID");
 }
 
 void render_sidebar(UIState &ui_state)
@@ -178,9 +177,9 @@ void render_sidebar(UIState &ui_state)
         if (ImGui::Button("+", Vec2(buttonSize, buttonSize)))
         {
             Section new_section;
-            const uint16_t new_id = generate_id(ui_state);
+            const uint16_t new_id = ++ui_state.latest_id;
             new_section.id = new_id;
-            StringFormat(new_section.name, sizeof(new_section.name), "Section %02d", new_id);
+            StringFormat(new_section.name, sizeof(new_section.name), "New Section");
             ui_state.sections.push_back(new_section);
             ui_state.workers.try_emplace(new_id);
             ui_state.active_section = static_cast<int>(ui_state.sections.size()) - 1;
@@ -253,7 +252,7 @@ void render_sidebar(UIState &ui_state)
         if (to_delete != -1)
         {
             auto item_to_delete_id = ui_state.sections[to_delete].id;
-            stop_worker(ui_state.workers[item_to_delete_id]);
+            stop_publish(ui_state.workers[item_to_delete_id]);
             ui_state.workers.erase(item_to_delete_id);
             ui_state.sections.erase(ui_state.sections.begin() + to_delete);
 
@@ -433,7 +432,7 @@ void render_publisher(UIState &ui_state)
                 {
                     if (!format_json_string(section.json_buffer)) 
                     {
-                        logs_add(section.logs, selected_topic_name ,"format failed. Invalid JSON input data");
+                        logs_add(&section.logs, selected_topic_name ,"format failed. Invalid JSON input data");
                     }
                 }
                 ImGui::SameLine();
@@ -479,11 +478,9 @@ void render_publisher(UIState &ui_state)
                 if (ImGui::Button("Start Publish", Vec2(setButtonWidth, 40)))
                 {
                     start_publish(
-                            selected_topic_name,
-                            selected_topic_write_string_fn,
-                            worker, 
-                            section.logs, section.qos, section.json_buffer,
-                            section.freqs);
+                        ui_state.sections, ui_state.workers, section.id,
+                        selected_topic_name, selected_topic_write_string_fn,
+                        section.qos, section.json_buffer, section.freqs);
                 }
             // Stop Publish Button
             } else {
@@ -491,8 +488,8 @@ void render_publisher(UIState &ui_state)
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, BUTTON_RED_HOVERED);
                 if (ImGui::Button("Stop Publish", Vec2(setButtonWidth, 40)))
                 {
-                    stop_worker(worker);
-                    logs_add(section.logs, selected_topic_name, "publisher stopped.");
+                    stop_publish(worker);
+                    logs_add(&section.logs, selected_topic_name, "publisher stopped.");
                 }
             }
             ImGui::PopStyleColor(2);

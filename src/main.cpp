@@ -94,6 +94,7 @@ void load_ui_state_from_json(UIState& ui_state) {
         // Basic fields
         if (root_obj.HasMember("id") && root_obj["id"].IsUint()) {
             s.id = root_obj["id"].GetUint();
+            ui_state.latest_id = s.id;
         }
         if (root_obj.HasMember("name") && root_obj["name"].IsString()) {
             std::strncpy(s.name, root_obj["name"].GetString(), sizeof(s.name) - 1);
@@ -161,6 +162,7 @@ void load_ui_state_from_json(UIState& ui_state) {
                 s.logs.n = logs["n"].GetInt();
             }
         }
+        ui_state.workers.try_emplace(s.id);
         ui_state.sections.push_back(std::move(s));
     }
     ui_state.active_section = static_cast<int>(ui_state.sections.size()) - 1;

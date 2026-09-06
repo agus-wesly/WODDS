@@ -89,6 +89,7 @@ struct UIState {
     Topics topics;
     std::vector<Section> sections;
     std::unordered_map<uint16_t, Worker> workers;
+    uint16_t latest_id = 0;
     int16_t active_section = -1;
     float main_scale = 1.0f;
 };
