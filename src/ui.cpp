@@ -188,22 +188,65 @@ void render_sidebar(UIState &ui_state)
 
         ImGui::Separator();
 
+        // Rename state
+        static int renaming_index      = -1;
+        static char rename_buffer[128] = "";
+        static bool focus_rename_input = false;
+        int to_rename                  = -1;
+
         // List sections
         int to_delete = -1;
-
         for (int i = 0; i < static_cast<int>(ui_state.sections.size()); i++)
         {
+            ImGui::PushID(i);
+
             bool isActive = (i == ui_state.active_section);
 
-            if (ImGui::Selectable(ui_state.sections[i].name, isActive)) ui_state.active_section = i;
+            if (renaming_index == i) {
+                ImGui::SetNextItemWidth(-1);
+                if (focus_rename_input)
+                {
+                    ImGui::SetKeyboardFocusHere();
+                    focus_rename_input = false;
+                }
 
-            // Right-click context menu to delete
-            if (ImGui::BeginPopupContextItem(ui_state.sections[i].name))
-            {
-                if (ImGui::MenuItem("Delete")) to_delete = i;
+                bool enterPressed = ImGui::InputText("##rename", rename_buffer, sizeof(rename_buffer),
+                        ImGuiInputTextFlags_EnterReturnsTrue |
+                        ImGuiInputTextFlags_AutoSelectAll);
 
-                ImGui::EndPopup();
+                if (enterPressed)
+                {
+                    if (rename_buffer[0] != '\0')
+                        strncpy(ui_state.sections[i].name, rename_buffer, sizeof(ui_state.sections[i].name) - 1);
+
+                    renaming_index = -1;
+                }
+                else if (ImGui::IsKeyPressed(ImGuiKey_Escape)) renaming_index = -1;
+                else if (ImGui::IsItemDeactivated() && !ImGui::IsItemDeactivatedAfterEdit()) renaming_index = -1;
+
+            } else {
+                if (ImGui::Selectable(ui_state.sections[i].name, isActive)) ui_state.active_section = i;
+
+                // Right-click
+                if (ImGui::BeginPopupContextItem(ui_state.sections[i].name))
+                {
+                    if (ImGui::MenuItem("Rename")) to_rename = i;
+                    if (ImGui::MenuItem("Delete")) to_delete = i;
+
+                    ImGui::EndPopup();
+                }
             }
+            
+            ImGui::PopID();
+        }
+
+        // Handle rename trigger (outside the loop, so it applies cleanly next frame)
+        if (to_rename != -1)
+        {
+            renaming_index = to_rename;
+            strncpy(rename_buffer, ui_state.sections[to_rename].name, sizeof(rename_buffer) - 1);
+            rename_buffer[sizeof(rename_buffer) - 1] = '\0';
+            focus_rename_input = true;
         }
 
         // Delete after iteration to avoid invalidating indices mid-loop
