@@ -87,6 +87,15 @@ struct Section {
 
 struct UIState {
     Topics topics;
+    // NOTE(wesly): 
+    // Currently we have issue about lifetimes inside thread
+    // Because currenty sections and workers might get reallocated
+    // In every tick inside each thread, we need to iterate through
+    // each section and worker given its id.
+    //
+    // I think we can improve this by setting maximum number of section allowed
+    // e.g. N = 200. And then just allocate static array for both section and worker
+    // and it will guarantee that the pointer to section and worker will remain valid.
     std::vector<Section> sections;
     std::unordered_map<uint16_t, Worker> workers;
     uint16_t latest_id = 0;
