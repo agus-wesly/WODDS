@@ -71,12 +71,7 @@ ENTRY_TEMPLATE = """    {{ "{idl_name}_Message", {{
             auto mts = new {idl_name}::MessageTypeSupportImpl();
             return [writer, mts]() -> std::string {{
                 {idl_name}::Message msg;
-                const static std::string s = "";
-                auto format = mts->make_format(OpenDDS::DCPS::JSON_DATA_REPRESENTATION);
-                if (mts->decode_from_string(s.c_str(), msg, format) != DDS::RETCODE_OK) {{
-                    assert(0 && "Unreachable");
-                }} 
-                return OpenDDS::DCPS::to_json(msg);
+                return "[" + OpenDDS::DCPS::to_json(msg) + "]";
             }};
         }}
     }}}},"""
