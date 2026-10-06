@@ -104,7 +104,7 @@ void stop_publish(Worker &worker)
         worker.job.join();
 }
 
-bool get_json_element(std::string_view json_data, rapidjson::StringBuffer& buffer, size_t &active_idx) {
+bool publish_json_array_string(std::string_view json_data, const std::function<bool(const char*)> topic_write_string) {
     rapidjson::Document doc;
     doc.Parse(json_data.data());
     if (!doc.IsArray()) {
@@ -113,10 +113,15 @@ bool get_json_element(std::string_view json_data, rapidjson::StringBuffer& buffe
     const auto doc_size = doc.Size();
     if (doc_size == 0) return false;
 
-    const rapidjson::Value& element = doc[active_idx];
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    element.Accept(writer);
-    active_idx = (active_idx + 1) % doc_size;
+    for (const auto& element : doc.GetArray()) {
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        element.Accept(writer);
+
+        if (!topic_write_string(buffer.GetString())) {
+            return false;
+        }
+    }
 
     return true;
 }
@@ -129,16 +134,12 @@ void send_once(const char *topic_name,
     // NOTE(wesly): Send once currently just publish first index everytime
     size_t active_idx = 0;
     rapidjson::StringBuffer buffer;
-    if (!get_json_element(json_data, buffer, active_idx)) {
+    if (!publish_json_array_string(json_data, topic_write_string)) {
         logs_add(&logs, topic_name, "publish failed. Invalid JSON input data");
         return;
     }
 
-    if (topic_write_string(buffer.GetString())) {
-        logs_add(&logs, topic_name, "publish success");
-    } else {
-        logs_add(&logs, topic_name, "publish failed. Invalid JSON input data");
-    }
+    logs_add(&logs, topic_name, "publish success");
 }
 
 void start_publish(
@@ -164,16 +165,7 @@ void start_publish(
     Section &section = *section_it;
     Logs *logs = &section.logs;
 
-    // NOTE(wesly): It might be slow, to generate string everytime, but it is the best we can do now
-    // Because in the future we will migrate to RUST anyway
-    size_t active_idx = 0;
-    rapidjson::StringBuffer buffer;
-
-    if (!get_json_element(json_data, buffer, active_idx)) {
-        logs_add(logs, topic_name, "publish failed. Invalid JSON input data");
-        return;
-    }
-    if (!topic_write_string(buffer.GetString())) {
+    if (!publish_json_array_string(json_data, topic_write_string)) {
         logs_add(logs, topic_name, "publish failed. Invalid JSON input data");
         return;
     }
@@ -181,7 +173,7 @@ void start_publish(
 
     const int delay_time_ms = 1000.0f / freqs;
     worker.running = true;
-    worker.job = std::thread([&workers, &sections, section_id, topic_name, topic_write_string, delay_time_ms, json_data, active_idx]() mutable {
+    worker.job = std::thread([&workers, &sections, section_id, topic_name, topic_write_string, delay_time_ms, json_data]() mutable {
         while (workers.at(section_id).running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(delay_time_ms));
 
@@ -191,13 +183,8 @@ void start_publish(
             if (section_it != sections.end()) {
                 Section &section = *section_it;
                 Logs *logs = &section.logs;
-                rapidjson::StringBuffer buffer;
 
-                if (!get_json_element(json_data, buffer, active_idx)) {
-                    logs_add(logs, topic_name, "publish failed. Invalid JSON input data");
-                    return;
-                }
-                if (!topic_write_string(buffer.GetString())) {
+                if (!publish_json_array_string(json_data, topic_write_string)) {
                     logs_add(logs, topic_name, "publish failed. Invalid JSON input data");
                     return;
                 }
